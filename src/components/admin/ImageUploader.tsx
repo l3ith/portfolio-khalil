@@ -4,20 +4,33 @@ import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { adminLabelStyle } from "@/components/admin/ui";
 
+function gcd(a: number, b: number): number {
+  return b === 0 ? a : gcd(b, a % b);
+}
+
+function reduceRatio(w: number, h: number): string {
+  if (!w || !h) return "16/9";
+  const g = gcd(Math.round(w), Math.round(h));
+  return `${Math.round(w) / g}/${Math.round(h) / g}`;
+}
+
 export function ImageUploader({
   name,
+  ratioName,
   label,
   defaultValue,
   onChange,
   height = 140,
 }: {
   name: string;
+  ratioName?: string;
   label?: string;
   defaultValue?: string | null;
   onChange?: (url: string) => void;
   height?: number;
 }) {
   const [url, setUrl] = useState<string>(defaultValue ?? "");
+  const [ratio, setRatio] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -83,6 +96,12 @@ export function ImageUploader({
             <img
               src={url}
               alt=""
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth && img.naturalHeight) {
+                  setRatio(reduceRatio(img.naturalWidth, img.naturalHeight));
+                }
+              }}
               style={{
                 width: "100%",
                 height: "100%",
@@ -207,6 +226,7 @@ export function ImageUploader({
         style={{ display: "none" }}
       />
       <input type="hidden" name={name} value={url} />
+      {ratioName && <input type="hidden" name={ratioName} value={ratio} />}
     </div>
   );
 }

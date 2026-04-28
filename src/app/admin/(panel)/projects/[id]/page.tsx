@@ -345,7 +345,7 @@ export default async function EditProjectPage({
           action={addImageAction}
           style={{
             display: "grid",
-            gridTemplateColumns: "2fr 100px 2fr auto",
+            gridTemplateColumns: "2fr 2fr auto",
             gap: 12,
             border: "1px solid var(--rule)",
             padding: 16,
@@ -353,11 +353,18 @@ export default async function EditProjectPage({
             alignItems: "end",
           }}
         >
-          <ImageUploader name="url" label="Image (drop or click)" height={120} />
-          <Field name="ratio" label="Ratio" defaultValue="16/9" />
-          <Field name="label" label="Label" />
+          <ImageUploader
+            name="url"
+            ratioName="ratio"
+            label="Image (drop or click — ratio detected automatically from the image)"
+            height={120}
+          />
+          <Field
+            name="label"
+            label="Caption / label (shown under the image on the project page)"
+          />
           <button type="submit" style={adminButtonStyle}>
-            Add
+            Add to gallery
           </button>
         </form>
         <GalleryList

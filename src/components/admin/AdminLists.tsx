@@ -139,7 +139,7 @@ export function GalleryList({
   onDelete: (id: string) => Promise<void>;
 }) {
   if (images.length === 0) return null;
-  const cols = "32px 60px 80px 1fr 1fr auto";
+  const cols = "32px 56px 60px 80px 1fr auto";
   return (
     <div style={{ border: "1px solid var(--rule)" }}>
       <SortableList
@@ -148,6 +148,19 @@ export function GalleryList({
         renderItem={(img, handle) => (
           <div style={{ ...rowBase, gridTemplateColumns: cols }}>
             <DragHandle handle={handle} />
+            <img
+              src={img.url}
+              alt=""
+              loading="lazy"
+              style={{
+                width: 56,
+                height: 40,
+                objectFit: "cover",
+                background: "rgba(10,10,10,0.06)",
+                border: "1px solid var(--rule)",
+                display: "block",
+              }}
+            />
             <span
               style={{
                 fontFamily: "var(--font-jetbrains-mono)",
@@ -155,13 +168,28 @@ export function GalleryList({
                 color: "var(--muted)",
               }}
             >
-              {img.order}
+              #{img.order}
             </span>
-            <span style={{ fontFamily: "var(--font-jetbrains-mono)", fontSize: 11 }}>
+            <span
+              style={{
+                fontFamily: "var(--font-jetbrains-mono)",
+                fontSize: 11,
+                color: "var(--muted)",
+              }}
+            >
               {img.ratio}
             </span>
-            <span style={{ fontSize: 13 }}>{img.labelEn}</span>
-            <span style={{ fontSize: 13, color: "var(--muted)" }}>{img.url}</span>
+            <span
+              style={{
+                fontSize: 13,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={img.labelEn}
+            >
+              {img.labelEn}
+            </span>
             <button
               type="button"
               onClick={() => {
