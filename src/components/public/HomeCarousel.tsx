@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { Project } from "@/lib/data";
+import { accentColor, type Project } from "@/lib/data";
 import { Placeholder } from "@/components/Placeholder";
 
 type Align = "left" | "center" | "right";
@@ -173,7 +173,7 @@ function SlideArt({ project, active }: { project: Project; active: boolean }) {
         ratio="auto"
         tone="dark"
         variant="schematic"
-        accent={`oklch(0.78 0.17 ${project.accent})`}
+        accent={accentColor(project.accent)}
         src={
           project.thumbnailUrl ||
           project.renderUrl ||
@@ -216,7 +216,8 @@ function SlideArt({ project, active }: { project: Project; active: boolean }) {
             pointerEvents: "none",
           }}
         >
-          <Reticle accent={`oklch(0.78 0.17 ${project.accent})`} />
+          <Reticle accent={accentColor(project.accent)} />
+          {/* Reticle still uses accentColor */}
         </div>
       )}
     </div>
@@ -383,7 +384,7 @@ function BottomBar({
             fontWeight: 300,
             margin: 0,
             lineHeight: 1.05,
-            color: `oklch(0.78 0.17 ${project.accent})`,
+            color: accentColor(project.accent),
             transition: "color 600ms cubic-bezier(0.4,0,0.15,1)",
           }}
         >

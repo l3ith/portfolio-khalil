@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import type { Project } from "@/lib/data";
+import { accentColor, type Project } from "@/lib/data";
 import { Placeholder } from "@/components/Placeholder";
 import { Footer } from "@/components/Footer";
 
@@ -121,7 +121,7 @@ function ProjectCard({ project, total }: { project: Project; total: number }) {
             ratio="4/3"
             tone="light"
             variant="schematic"
-            accent={`oklch(0.78 0.17 ${project.accent})`}
+            accent={accentColor(project.accent)}
             src={
               project.thumbnailUrl ||
               project.gallery[0]?.url ||

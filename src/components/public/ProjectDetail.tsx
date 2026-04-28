@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { Project } from "@/lib/data";
+import { accentColor, type Project } from "@/lib/data";
 import { Placeholder } from "@/components/Placeholder";
 import { Footer } from "@/components/Footer";
 
@@ -23,14 +23,14 @@ export function ProjectDetail({
   }, [project.id]);
 
   useEffect(() => {
-    const accent = `oklch(0.78 0.17 ${project.accent})`;
+    const accent = accentColor(project.accent);
     document.documentElement.style.setProperty("--project-accent", accent);
     return () => {
       document.documentElement.style.removeProperty("--project-accent");
     };
   }, [project]);
 
-  const accent = `oklch(0.78 0.17 ${project.accent})`;
+  const accent = accentColor(project.accent);
 
   return (
     <article
@@ -63,8 +63,15 @@ export function ProjectDetail({
             variant="schematic"
             accent={accent}
             src={
+              project.thumbnailUrl ||
               project.renderUrl ||
+              project.gallery[0]?.url ||
               `https://picsum.photos/seed/${project.id}-hero/1920/1080?grayscale`
+            }
+            objectPosition={
+              project.thumbnailUrl
+                ? `${project.thumbnailX ?? 50}% ${project.thumbnailY ?? 50}%`
+                : undefined
             }
             style={{ width: "100%", height: "120vh" }}
             showCorners={false}
@@ -345,7 +352,7 @@ function SuggestedProjects({
                 ratio="4/3"
                 tone="light"
                 variant="schematic"
-                accent={`oklch(0.78 0.17 ${p.accent})`}
+                accent={accentColor(p.accent)}
                 src={`https://picsum.photos/seed/${p.id}/800/600?grayscale`}
                 style={{ height: "100%" }}
                 showCorners={true}

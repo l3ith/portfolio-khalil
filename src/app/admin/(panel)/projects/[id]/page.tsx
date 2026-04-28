@@ -6,7 +6,7 @@ import { GalleryList, CreditsList } from "@/components/admin/AdminLists";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
-import { AccentHuePicker } from "@/components/admin/AccentHuePicker";
+import { HexAccentPicker } from "@/components/admin/HexAccentPicker";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -267,10 +267,10 @@ export default async function EditProjectPage({
             <Field name="client" label="Client" defaultValue={project.client} />
             <Field name="role" label="Role" defaultValue={project.role} />
             <div style={{ gridColumn: "span 3" }}>
-              <AccentHuePicker
+              <HexAccentPicker
                 name="accent"
                 label="Project accent color (titles + reticle on home + slider knob)"
-                help="Pick any color or drag the hue slider — only the hue is stored"
+                help="Pick a color or type HEX/RGB — click ✓ to apply, then Save changes"
                 defaultValue={project.accent}
               />
             </div>

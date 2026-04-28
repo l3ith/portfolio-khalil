@@ -1,3 +1,13 @@
+// Convert stored accent value to a CSS color.
+// New format: hex (#rrggbb). Legacy format: numeric hue → oklch fallback.
+export function accentColor(value: string | null | undefined): string {
+  if (!value) return "oklch(0.78 0.17 75)";
+  const v = value.trim();
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return v;
+  if (/^\d+(\.\d+)?$/.test(v)) return `oklch(0.78 0.17 ${v})`;
+  return v;
+}
+
 export type Project = {
   id: string;
   code: string;
