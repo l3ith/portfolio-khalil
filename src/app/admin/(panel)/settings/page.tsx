@@ -9,6 +9,7 @@ import {
 } from "@/components/admin/ui";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { LogoSizeSlider } from "@/components/admin/LogoSizeSlider";
+import { HexColorField } from "@/components/admin/HexColorField";
 
 export const dynamic = "force-dynamic";
 
@@ -108,6 +109,14 @@ async function saveTheme(formData: FormData) {
       fontDisplay: String(formData.get("fontDisplay") ?? "Space Grotesk"),
       fontMono: String(formData.get("fontMono") ?? "JetBrains Mono"),
       fontBody: String(formData.get("fontBody") ?? "Inter"),
+      homeTitleSize: Math.max(
+        16,
+        Math.min(160, Number(formData.get("homeTitleSize") ?? 56)),
+      ),
+      homeTitleAlign: (() => {
+        const v = String(formData.get("homeTitleAlign") ?? "center");
+        return ["left", "center", "right"].includes(v) ? v : "center";
+      })(),
     },
   });
   revalidatePath("/admin/settings");
@@ -119,25 +128,46 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      {adminPageHeader("Settings", "Site meta · theme · typography")}
+      {adminPageHeader("Settings", "Site identity · branding · theme · home page")}
 
       <form action={saveMeta} style={{ marginTop: 32 }}>
-        <Section title="Site meta">
+        <Section title="Site identity (meta tags + footer)">
           <Grid cols={2}>
-            <Field name="siteTitle" label="Title" defaultValue={s.siteTitleEn} />
-            <Field name="siteTagline" label="Tagline" defaultValue={s.siteTaglineEn} />
+            <Field
+              name="siteTitle"
+              label="Site title"
+              help="Shown in browser tab, search results, and footer"
+              defaultValue={s.siteTitleEn}
+            />
+            <Field
+              name="siteTagline"
+              label="Tagline (one-line pitch)"
+              help="Short subtitle, e.g. 'Concept, series, screen.'"
+              defaultValue={s.siteTaglineEn}
+            />
             <Field
               name="metaDescription"
-              label="Meta description"
+              label="SEO description"
+              help="~160 chars, displayed in Google/X/LinkedIn previews"
               defaultValue={s.metaDescriptionEn}
             />
-            <Field name="email" label="Public email" defaultValue={s.email} />
-            <Field name="location" label="Location" defaultValue={s.location} />
+            <Field
+              name="email"
+              label="Public contact email"
+              help="Address shown on /contact and in mailto links"
+              defaultValue={s.email}
+            />
+            <Field
+              name="location"
+              label="Location label"
+              help="Free text, e.g. 'Paris / Turin'"
+              defaultValue={s.location}
+            />
           </Grid>
         </Section>
 
         <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
-          Save site meta
+          Save site identity
         </button>
       </form>
 
@@ -166,41 +196,71 @@ export default async function SettingsPage() {
       </form>
 
       <form action={saveTheme} style={{ marginTop: 56 }}>
-        <Section title="Theme · Light palette">
+        <Section title="Light theme colors (used when visitor has light mode)">
           <Grid cols={3}>
-            <ColorField name="bgLight" label="Background" defaultValue={s.bgLight} />
-            <ColorField name="fgLight" label="Foreground" defaultValue={s.fgLight} />
-            <Field name="mutedLight" label="Muted (text)" defaultValue={s.mutedLight} />
+            <HexColorField
+              name="bgLight"
+              label="Page background"
+              help="Main background color behind everything"
+              defaultValue={s.bgLight}
+            />
+            <HexColorField
+              name="fgLight"
+              label="Main text color"
+              help="Primary text + headings"
+              defaultValue={s.fgLight}
+            />
+            <Field
+              name="mutedLight"
+              label="Muted text color (subtle annotations)"
+              help="Accepts hex or rgba(...). Used for captions, smallcaps."
+              defaultValue={s.mutedLight}
+            />
           </Grid>
         </Section>
 
-        <Section title="Theme · Dark palette">
+        <Section title="Dark theme colors (used when visitor has dark mode)">
           <Grid cols={3}>
-            <ColorField name="bgDark" label="Background" defaultValue={s.bgDark} />
-            <ColorField name="fgDark" label="Foreground" defaultValue={s.fgDark} />
-            <Field name="mutedDark" label="Muted (text)" defaultValue={s.mutedDark} />
+            <HexColorField
+              name="bgDark"
+              label="Page background"
+              help="Main background color behind everything"
+              defaultValue={s.bgDark}
+            />
+            <HexColorField
+              name="fgDark"
+              label="Main text color"
+              help="Primary text + headings"
+              defaultValue={s.fgDark}
+            />
+            <Field
+              name="mutedDark"
+              label="Muted text color (subtle annotations)"
+              help="Accepts hex or rgba(...). Used for captions, smallcaps."
+              defaultValue={s.mutedDark}
+            />
           </Grid>
         </Section>
 
-        <Section title="Theme · Accent (OKLCH)">
+        <Section title="Accent color — used on highlights, buttons, dynamic titles">
           <Grid cols={3}>
             <Field
               name="accentL"
-              label="Lightness (0–1)"
+              label="Lightness · 0 = black, 1 = white (default 0.78)"
               type="number"
               step="0.01"
               defaultValue={String(s.accentL)}
             />
             <Field
               name="accentC"
-              label="Chroma (0–0.4)"
+              label="Chroma · 0 = grey, 0.4 = vivid (default 0.17)"
               type="number"
               step="0.01"
               defaultValue={String(s.accentC)}
             />
             <Field
               name="accentH"
-              label="Hue (0–360)"
+              label="Hue · color wheel position 0–360 (default 75)"
               type="number"
               step="1"
               defaultValue={String(s.accentH)}
@@ -238,23 +298,23 @@ export default async function SettingsPage() {
           </div>
         </Section>
 
-        <Section title="Typography">
+        <Section title="Typography (Google Fonts)">
           <Grid cols={3}>
             <SelectField
               name="fontDisplay"
-              label="Display (headings)"
+              label="Display font (large headings)"
               defaultValue={s.fontDisplay}
               options={FONT_OPTIONS}
             />
             <SelectField
               name="fontMono"
-              label="Mono (UI / numerals)"
+              label="Mono font (labels / numerals / UI chrome)"
               defaultValue={s.fontMono}
               options={FONT_OPTIONS}
             />
             <SelectField
               name="fontBody"
-              label="Body"
+              label="Body font (paragraphs / descriptions)"
               defaultValue={s.fontBody}
               options={FONT_OPTIONS}
             />
@@ -306,8 +366,30 @@ export default async function SettingsPage() {
           </div>
         </Section>
 
+        <Section title="Home page · featured project title">
+          <Grid cols={2}>
+            <Field
+              name="homeTitleSize"
+              label="Title font size — px (16 = tiny, 56 = default, 120 = huge)"
+              type="number"
+              step="1"
+              defaultValue={String(s.homeTitleSize)}
+            />
+            <SelectField
+              name="homeTitleAlign"
+              label="Title horizontal alignment in the bottom bar"
+              defaultValue={s.homeTitleAlign}
+              options={[
+                { value: "left", label: "Left — pushed to the left edge" },
+                { value: "center", label: "Center — middle of the bar" },
+                { value: "right", label: "Right — pushed to the right edge" },
+              ]}
+            />
+          </Grid>
+        </Section>
+
         <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
-          Save theme
+          Save theme + home page settings
         </button>
       </form>
     </div>
@@ -345,12 +427,14 @@ function Grid({ cols, children }: { cols: number; children: React.ReactNode }) {
 function Field({
   name,
   label,
+  help,
   defaultValue,
   type = "text",
   step,
 }: {
   name: string;
   label: string;
+  help?: string;
   defaultValue?: string;
   type?: string;
   step?: string;
@@ -358,6 +442,21 @@ function Field({
   return (
     <label>
       <div style={adminLabelStyle}>{label}</div>
+      {help && (
+        <div
+          style={{
+            fontFamily: "var(--font-jetbrains-mono)",
+            fontSize: 10,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--muted)",
+            marginBottom: 6,
+            opacity: 0.85,
+          }}
+        >
+          {help}
+        </div>
+      )}
       <input
         name={name}
         type={type}
@@ -406,15 +505,19 @@ function SelectField({
   name: string;
   label: string;
   defaultValue?: string;
-  options: string[];
+  options: string[] | { value: string; label: string }[];
 }) {
+  const norm: { value: string; label: string }[] =
+    options.length > 0 && typeof options[0] === "string"
+      ? (options as string[]).map((o) => ({ value: o, label: o }))
+      : (options as { value: string; label: string }[]);
   return (
     <label>
       <div style={adminLabelStyle}>{label}</div>
       <select name={name} defaultValue={defaultValue} style={adminInputStyle}>
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
+        {norm.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
           </option>
         ))}
       </select>

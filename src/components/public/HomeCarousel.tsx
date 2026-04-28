@@ -5,7 +5,17 @@ import { useEffect, useRef, useState } from "react";
 import type { Project } from "@/lib/data";
 import { Placeholder } from "@/components/Placeholder";
 
-export function HomeCarousel({ projects }: { projects: Project[] }) {
+type Align = "left" | "center" | "right";
+
+export function HomeCarousel({
+  projects,
+  titleSize = 56,
+  titleAlign = "center",
+}: {
+  projects: Project[];
+  titleSize?: number;
+  titleAlign?: Align;
+}) {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hint, setHint] = useState(0);
@@ -127,6 +137,8 @@ export function HomeCarousel({ projects }: { projects: Project[] }) {
         active={active}
         total={total}
         project={project}
+        titleSize={titleSize}
+        titleAlign={titleAlign}
         onPrev={() => {
           prev();
           setHint((h) => h + 1);
@@ -276,6 +288,8 @@ function BottomBar({
   active,
   total,
   project,
+  titleSize,
+  titleAlign,
   onPrev,
   onNext,
   onSelect,
@@ -283,6 +297,8 @@ function BottomBar({
   active: number;
   total: number;
   project: Project;
+  titleSize: number;
+  titleAlign: Align;
   onPrev: () => void;
   onNext: () => void;
   onSelect: (i: number) => void;
@@ -356,14 +372,14 @@ function BottomBar({
         </div>
       </div>
 
-      <div style={{ textAlign: "center", maxWidth: 760 }}>
+      <div style={{ textAlign: titleAlign, maxWidth: 760, justifySelf: titleAlign === "left" ? "start" : titleAlign === "right" ? "end" : "center" }}>
         <div className="smallcaps" style={{ color: "rgba(240,238,232,0.55)", marginBottom: 10 }}>
           {project.category} · {project.year} · {project.client}
         </div>
         <h1
           className="display"
           style={{
-            fontSize: "clamp(28px, 3.4vw, 56px)",
+            fontSize: `clamp(${Math.max(16, Math.round(titleSize * 0.5))}px, ${(titleSize / 16).toFixed(2)}vw, ${titleSize}px)`,
             fontWeight: 300,
             margin: 0,
             lineHeight: 1.05,

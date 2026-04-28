@@ -128,6 +128,9 @@ model Setting {
   fontMono          String   @default("JetBrains Mono")
   fontBody          String   @default("Inter")
 
+  homeTitleSize     Int      @default(56)
+  homeTitleAlign    String   @default("center")
+
   updatedAt         DateTime @updatedAt
 }
 
