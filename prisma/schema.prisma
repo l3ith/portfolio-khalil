@@ -99,6 +99,7 @@ model Timeline {
 
 model Setting {
   id                String   @id @default(cuid())
+  logoUrl           String?
   siteTitleFr       String   @default("Khalil — Designer automobile")
   siteTitleEn       String   @default("Khalil — Automotive Designer")
   siteTaglineFr     String   @default("Concept, série, écran.")

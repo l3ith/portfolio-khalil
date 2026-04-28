@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { PublicChrome } from "@/components/PublicChrome";
 import { getActiveTheme, themeToCss, googleFontsUrl } from "@/lib/theme";
+import { db } from "@/lib/db";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,6 +14,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const theme = await getActiveTheme();
+  const setting = await db.setting.findFirst({ select: { logoUrl: true } });
   return (
     <html lang="en" data-theme="light">
       <head>
@@ -22,7 +24,7 @@ export default async function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: themeToCss(theme) }} />
       </head>
       <body>
-        <PublicChrome>{children}</PublicChrome>
+        <PublicChrome logoUrl={setting?.logoUrl ?? null}>{children}</PublicChrome>
       </body>
     </html>
   );

@@ -7,6 +7,7 @@ import {
   adminButtonStyle,
   adminPageHeader,
 } from "@/components/admin/ui";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 
 export const dynamic = "force-dynamic";
 
@@ -51,6 +52,18 @@ async function saveMeta(formData: FormData) {
       email: String(formData.get("email") ?? ""),
       location: String(formData.get("location") ?? ""),
     },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/", "layout");
+}
+
+async function saveBranding(formData: FormData) {
+  "use server";
+  const s = await ensureSetting();
+  const logoUrl = String(formData.get("logoUrl") ?? "").trim();
+  await db.setting.update({
+    where: { id: s.id },
+    data: { logoUrl: logoUrl || null },
   });
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
@@ -104,6 +117,22 @@ export default async function SettingsPage() {
 
         <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
           Save site meta
+        </button>
+      </form>
+
+      <form action={saveBranding} style={{ marginTop: 56 }}>
+        <Section title="Branding · Logo">
+          <div style={{ maxWidth: 320 }}>
+            <ImageUploader
+              name="logoUrl"
+              label="Header logo (replaces the KHALIL text — use a transparent PNG/SVG)"
+              defaultValue={s.logoUrl}
+              height={120}
+            />
+          </div>
+        </Section>
+        <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
+          Save logo
         </button>
       </form>
 

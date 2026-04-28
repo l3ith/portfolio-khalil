@@ -49,7 +49,7 @@ function useTheme(): [Theme, (t: Theme) => void] {
   return [theme, update];
 }
 
-export function Header() {
+export function Header({ logoUrl }: { logoUrl?: string | null }) {
   const pathname = usePathname();
   const [theme, setTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -94,18 +94,28 @@ export function Header() {
             gap: 10,
           }}
         >
-          <span
-            aria-hidden
-            style={{
-              width: 10,
-              height: 10,
-              background: "var(--accent)",
-              display: "inline-block",
-              transform: "rotate(45deg)",
-              opacity: 0.95,
-            }}
-          />
-          KHALIL
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="KHALIL"
+              style={{ height: 28, width: "auto", display: "block" }}
+            />
+          ) : (
+            <>
+              <span
+                aria-hidden
+                style={{
+                  width: 10,
+                  height: 10,
+                  background: "var(--accent)",
+                  display: "inline-block",
+                  transform: "rotate(45deg)",
+                  opacity: 0.95,
+                }}
+              />
+              KHALIL
+            </>
+          )}
         </Link>
 
         <div

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "node:fs/promises";
-import path from "node:path";
+import { put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 import { getSession } from "@/lib/auth";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif"];
+const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "image/svg+xml"];
 
 export async function POST(req: Request) {
   const session = await getSession();
@@ -25,11 +24,10 @@ export async function POST(req: Request) {
 
   const ext = file.name.split(".").pop()?.toLowerCase() || "bin";
   const id = randomUUID();
-  const filename = `${id}.${ext}`;
-  const dir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(dir, { recursive: true });
-  const buf = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(dir, filename), buf);
+  const blob = await put(`uploads/${id}.${ext}`, file, {
+    access: "public",
+    contentType: file.type,
+  });
 
-  return NextResponse.json({ url: `/uploads/${filename}` });
+  return NextResponse.json({ url: blob.url });
 }
