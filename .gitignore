@@ -39,3 +39,18 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude
+.claude/
+
+# playwright / tests
+/tests/
+/test-results/
+/.playwright-mcp/
+playwright.config.ts
+
+# uploads (user-generated content, not versioned)
+/public/uploads/
+
+# prisma config (local only)
+prisma.config.ts
