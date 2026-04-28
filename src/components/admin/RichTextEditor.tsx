@@ -3,6 +3,7 @@
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
+import TextAlign from "@tiptap/extension-text-align";
 import { useEffect } from "react";
 import { adminLabelStyle } from "@/components/admin/ui";
 
@@ -46,6 +47,11 @@ export function RichTextEditor({
       Link.configure({
         openOnClick: false,
         HTMLAttributes: { rel: "noopener nofollow", target: "_blank" },
+      }),
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+        alignments: ["left", "center", "right", "justify"],
+        defaultAlignment: "left",
       }),
     ],
     content: defaultValue || "<p></p>",
@@ -96,8 +102,13 @@ export function RichTextEditor({
     );
   }
 
-  const isActive = (action: string, attrs?: Record<string, unknown>) =>
-    editor.isActive(action, attrs);
+  const isActive = (
+    actionOrAttrs: string | Record<string, unknown>,
+    attrs?: Record<string, unknown>,
+  ): boolean => {
+    if (typeof actionOrAttrs === "string") return editor.isActive(actionOrAttrs, attrs);
+    return editor.isActive(actionOrAttrs);
+  };
 
   const onLink = () => {
     const prev = editor.getAttributes("link").href as string | undefined;
@@ -220,6 +231,43 @@ export function RichTextEditor({
           title="Inline code"
         >
           {"<>"}
+        </button>
+        <span style={{ width: 1, background: "var(--rule)", margin: "0 4px" }} />
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          style={isActive({ textAlign: "left" }) ? toolbarBtnActive : toolbarBtn}
+          title="Align left"
+          aria-label="Align left"
+        >
+          ⯇
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          style={isActive({ textAlign: "center" }) ? toolbarBtnActive : toolbarBtn}
+          title="Align center"
+          aria-label="Align center"
+        >
+          ▭
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          style={isActive({ textAlign: "right" }) ? toolbarBtnActive : toolbarBtn}
+          title="Align right"
+          aria-label="Align right"
+        >
+          ⯈
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          style={isActive({ textAlign: "justify" }) ? toolbarBtnActive : toolbarBtn}
+          title="Justify"
+          aria-label="Justify"
+        >
+          ☰
         </button>
         <span style={{ width: 1, background: "var(--rule)", margin: "0 4px" }} />
         <button

@@ -211,6 +211,15 @@ async function removeCarouselImage(projectId: string, slug: string, imageId: str
   revalidatePath(`/work/${slug}`);
 }
 
+async function saveCarouselImagePosition(projectId: string, slug: string, imageId: string, x: number, y: number) {
+  "use server";
+  const cx = Math.max(0, Math.min(100, Math.round(x)));
+  const cy = Math.max(0, Math.min(100, Math.round(y)));
+  await db.projectCarouselImage.update({ where: { id: imageId }, data: { posX: cx, posY: cy } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function reorderCredits(projectId: string, ids: string[]) {
   "use server";
   await db.$transaction(
@@ -261,6 +270,7 @@ export default async function EditProjectPage({
   const updateCarouselPositionAction = updateCarouselPosition.bind(null, id, project.slug);
   const addCarouselImageAction = addCarouselImage.bind(null, id, project.slug);
   const removeCarouselImageAction = removeCarouselImage.bind(null, id, project.slug);
+  const saveCarouselImagePositionAction = saveCarouselImagePosition.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -481,6 +491,7 @@ export default async function EditProjectPage({
           onPosition={updateCarouselPositionAction}
           onAddImage={addCarouselImageAction}
           onRemoveImage={removeCarouselImageAction}
+          onImagePosition={saveCarouselImagePositionAction}
         />
       </Section>
 
