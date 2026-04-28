@@ -352,21 +352,28 @@ function BottomBar({
       </div>
 
       <div style={{ textAlign: "center", maxWidth: 760 }}>
-        <div className="smallcaps" style={{ color: "rgba(240,238,232,0.55)", marginBottom: 12 }}>
+        <div className="smallcaps" style={{ color: "rgba(240,238,232,0.55)", marginBottom: 10 }}>
           {project.category} · {project.year} · {project.client}
         </div>
         <h1
           className="display"
-          style={{ fontSize: "clamp(44px, 6vw, 88px)", fontWeight: 300, margin: 0 }}
+          style={{
+            fontSize: "clamp(28px, 3.4vw, 56px)",
+            fontWeight: 300,
+            margin: 0,
+            lineHeight: 1.05,
+            color: `oklch(0.78 0.17 ${project.accent})`,
+            transition: "color 600ms cubic-bezier(0.4,0,0.15,1)",
+          }}
         >
           {project.title}
         </h1>
         <div
           style={{
             fontFamily: "var(--font-inter), Inter, sans-serif",
-            fontSize: 14,
-            opacity: 0.75,
-            marginTop: 12,
+            fontSize: 13,
+            opacity: 0.7,
+            marginTop: 8,
             fontWeight: 300,
           }}
         >

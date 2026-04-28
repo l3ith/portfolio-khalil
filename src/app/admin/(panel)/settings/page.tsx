@@ -69,6 +69,17 @@ async function saveBranding(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+async function saveLogoUrl(url: string) {
+  "use server";
+  const s = await ensureSetting();
+  await db.setting.update({
+    where: { id: s.id },
+    data: { logoUrl: url || null },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/", "layout");
+}
+
 async function saveTheme(formData: FormData) {
   "use server";
   const s = await ensureSetting();
@@ -128,6 +139,7 @@ export default async function SettingsPage() {
               label="Header logo (replaces the KHALIL text — use a transparent PNG/SVG)"
               defaultValue={s.logoUrl}
               height={120}
+              onChange={saveLogoUrl}
             />
           </div>
         </Section>
