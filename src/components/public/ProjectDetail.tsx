@@ -25,7 +25,9 @@ export function ProjectDetail({
   useEffect(() => {
     const accent = `oklch(0.78 0.17 ${project.accent})`;
     document.documentElement.style.setProperty("--project-accent", accent);
-    return () => document.documentElement.style.removeProperty("--project-accent");
+    return () => {
+      document.documentElement.style.removeProperty("--project-accent");
+    };
   }, [project]);
 
   const accent = `oklch(0.78 0.17 ${project.accent})`;
