@@ -8,6 +8,7 @@ import {
   adminPageHeader,
 } from "@/components/admin/ui";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { LogoSizeSlider } from "@/components/admin/LogoSizeSlider";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,15 @@ async function saveLogoUrl(url: string) {
   revalidatePath("/", "layout");
 }
 
+async function saveLogoHeight(height: number) {
+  "use server";
+  const h = Math.max(12, Math.min(160, Math.round(height)));
+  const s = await ensureSetting();
+  await db.setting.update({ where: { id: s.id }, data: { logoHeight: h } });
+  revalidatePath("/admin/settings");
+  revalidatePath("/", "layout");
+}
+
 async function saveTheme(formData: FormData) {
   "use server";
   const s = await ensureSetting();
@@ -136,11 +146,18 @@ export default async function SettingsPage() {
           <div style={{ maxWidth: 320 }}>
             <ImageUploader
               name="logoUrl"
-              label="Header logo (replaces the KHALIL text — use a transparent PNG/SVG)"
+              label="Header logo (replaces the KHALIL text — PNG, SVG, or animated GIF)"
               defaultValue={s.logoUrl}
               height={120}
               onChange={saveLogoUrl}
             />
+            <div style={{ marginTop: 16 }}>
+              <LogoSizeSlider
+                initialHeight={s.logoHeight}
+                logoUrl={s.logoUrl}
+                onChange={saveLogoHeight}
+              />
+            </div>
           </div>
         </Section>
         <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>

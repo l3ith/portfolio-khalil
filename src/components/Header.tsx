@@ -49,7 +49,13 @@ function useTheme(): [Theme, (t: Theme) => void] {
   return [theme, update];
 }
 
-export function Header({ logoUrl }: { logoUrl?: string | null }) {
+export function Header({
+  logoUrl,
+  logoHeight = 28,
+}: {
+  logoUrl?: string | null;
+  logoHeight?: number;
+}) {
   const pathname = usePathname();
   const [theme, setTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -98,7 +104,7 @@ export function Header({ logoUrl }: { logoUrl?: string | null }) {
             <img
               src={logoUrl}
               alt="KHALIL"
-              style={{ height: 28, width: "auto", display: "block" }}
+              style={{ height: logoHeight, width: "auto", display: "block" }}
             />
           ) : (
             <>

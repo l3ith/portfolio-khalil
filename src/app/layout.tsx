@@ -14,7 +14,7 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const theme = await getActiveTheme();
-  const setting = await db.setting.findFirst({ select: { logoUrl: true } });
+  const setting = await db.setting.findFirst({ select: { logoUrl: true, logoHeight: true } });
   return (
     <html lang="en" data-theme="light">
       <head>
@@ -24,7 +24,12 @@ export default async function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: themeToCss(theme) }} />
       </head>
       <body>
-        <PublicChrome logoUrl={setting?.logoUrl ?? null}>{children}</PublicChrome>
+        <PublicChrome
+          logoUrl={setting?.logoUrl ?? null}
+          logoHeight={setting?.logoHeight ?? 28}
+        >
+          {children}
+        </PublicChrome>
       </body>
     </html>
   );

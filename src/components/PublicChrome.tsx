@@ -7,9 +7,11 @@ import { Header } from "@/components/Header";
 export function PublicChrome({
   children,
   logoUrl,
+  logoHeight,
 }: {
   children: React.ReactNode;
   logoUrl?: string | null;
+  logoHeight?: number;
 }) {
   const pathname = usePathname();
   const isAdmin = pathname.startsWith("/admin");
@@ -21,7 +23,7 @@ export function PublicChrome({
   return (
     <>
       <DriftCursor />
-      <Header logoUrl={logoUrl ?? null} />
+      <Header logoUrl={logoUrl ?? null} logoHeight={logoHeight ?? 28} />
       <main className="fade-in">{children}</main>
     </>
   );

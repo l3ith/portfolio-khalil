@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Setting" ADD COLUMN "logoHeight" INTEGER NOT NULL DEFAULT 28;
