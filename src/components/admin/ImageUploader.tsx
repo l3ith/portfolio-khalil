@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { adminLabelStyle } from "@/components/admin/ui";
 
 export function ImageUploader({
@@ -22,17 +23,17 @@ export function ImageUploader({
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const upload = async (file: File) => {
+  const doUpload = async (file: File) => {
     setError(null);
     setBusy(true);
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Upload failed");
-      setUrl(json.url);
-      onChange?.(json.url);
+      const blob = await upload(`uploads/${file.name}`, file, {
+        access: "public",
+        handleUploadUrl: "/api/upload",
+        contentType: file.type || undefined,
+      });
+      setUrl(blob.url);
+      onChange?.(blob.url);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -42,14 +43,14 @@ export function ImageUploader({
 
   const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (f) void upload(f);
+    if (f) void doUpload(f);
   };
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragOver(false);
     const f = e.dataTransfer.files?.[0];
-    if (f) void upload(f);
+    if (f) void doUpload(f);
   };
 
   return (
