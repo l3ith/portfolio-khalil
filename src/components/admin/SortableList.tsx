@@ -8,6 +8,8 @@ import {
   useSensors,
   closestCenter,
   type DragEndEvent,
+  type DraggableAttributes,
+  type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -22,8 +24,8 @@ type Item = { id: string };
 export type DragHandleProps = {
   ref: (el: HTMLElement | null) => void;
   style: CSSProperties;
-  attributes: Record<string, unknown>;
-  listeners: Record<string, unknown> | undefined;
+  attributes: DraggableAttributes;
+  listeners: DraggableSyntheticListeners;
 };
 
 export function SortableList<T extends Item>({
