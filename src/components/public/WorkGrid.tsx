@@ -122,7 +122,11 @@ function ProjectCard({ project, total }: { project: Project; total: number }) {
             tone="light"
             variant="schematic"
             accent={`oklch(0.78 0.17 ${project.accent})`}
-            src={`https://picsum.photos/seed/${project.id}/800/600?grayscale`}
+            src={
+              project.thumbnailUrl ||
+              project.gallery[0]?.url ||
+              `https://picsum.photos/seed/${project.id}/800/600?grayscale`
+            }
             style={{ height: "100%" }}
             showCorners={true}
           />

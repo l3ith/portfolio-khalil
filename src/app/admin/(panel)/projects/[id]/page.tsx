@@ -39,6 +39,7 @@ async function updateProject(id: string, formData: FormData) {
       renderLabel: String(formData.get("renderLabel") ?? "").trim() || null,
       sketchUrl: String(formData.get("sketchUrl") ?? "").trim() || null,
       renderUrl: String(formData.get("renderUrl") ?? "").trim() || null,
+      thumbnailUrl: String(formData.get("thumbnailUrl") ?? "").trim() || null,
       wipePosition: Number(formData.get("wipePosition") ?? 0),
       categoryId: String(formData.get("categoryId") ?? ""),
       published: formData.get("published") === "on",
@@ -106,6 +107,14 @@ async function saveRenderUrl(projectId: string, slug: string, url: string) {
   revalidatePath(`/work/${slug}`);
 }
 
+async function saveThumbnailUrl(projectId: string, slug: string, url: string) {
+  "use server";
+  await db.project.update({ where: { id: projectId }, data: { thumbnailUrl: url || null } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function addCredit(projectId: string, formData: FormData) {
   "use server";
   const role = String(formData.get("role") ?? "").trim();
@@ -169,6 +178,7 @@ export default async function EditProjectPage({
   const reorderCreditsAction = reorderCredits.bind(null, id);
   const saveSketchAction = saveSketchUrl.bind(null, id, project.slug);
   const saveRenderAction = saveRenderUrl.bind(null, id, project.slug);
+  const saveThumbnailAction = saveThumbnailUrl.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -233,6 +243,18 @@ export default async function EditProjectPage({
             <Field name="renderLabel" label="Render label" defaultValue={project.renderLabel ?? ""} />
             <Field name="order" label="Order" type="number" defaultValue={String(project.order)} />
           </Grid>
+        </Section>
+
+        <Section title="Thumbnail">
+          <div style={{ maxWidth: 360 }}>
+            <ImageUploader
+              name="thumbnailUrl"
+              label="Cover image (shown on /work grid — recommend 4:3, ≥ 800×600)"
+              defaultValue={project.thumbnailUrl}
+              height={180}
+              onChange={saveThumbnailAction}
+            />
+          </div>
         </Section>
 
         <Section title="Sketch · Render slider">

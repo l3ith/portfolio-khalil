@@ -162,7 +162,12 @@ function SlideArt({ project, active }: { project: Project; active: boolean }) {
         tone="dark"
         variant="schematic"
         accent={`oklch(0.78 0.17 ${project.accent})`}
-        src={`https://picsum.photos/seed/${project.id}/1600/900?grayscale`}
+        src={
+          project.thumbnailUrl ||
+          project.renderUrl ||
+          project.gallery[0]?.url ||
+          `https://picsum.photos/seed/${project.id}/1600/900?grayscale`
+        }
         style={{ width: "100%", height: "100%" }}
         showCorners={false}
       />
