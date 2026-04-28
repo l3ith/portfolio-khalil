@@ -18,7 +18,7 @@ export type Project = {
   thumbnailX?: number;
   thumbnailY?: number;
   wipePosition: number;
-  gallery: { ratio: string; label: string; url?: string | null }[];
+  gallery: { id?: string; ratio: string; label: string; url?: string | null; posX?: number; posY?: number }[];
   credits: [string, string][];
 };
 

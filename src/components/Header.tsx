@@ -278,8 +278,9 @@ function OffCanvasMenu({
   const items = [
     { href: "/", label: "Index", num: "00" },
     { href: "/work", label: "Work", num: "01" },
-    { href: "/about", label: "About", num: "02" },
-    { href: "/contact", label: "Contact", num: "03" },
+    { href: "/sketchbook", label: "Sketchbook", num: "02" },
+    { href: "/about", label: "About", num: "03" },
+    { href: "/contact", label: "Contact", num: "04" },
   ];
 
   useEffect(() => {

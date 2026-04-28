@@ -220,6 +220,7 @@ export function ProjectDetail({
                     g.url ||
                     `https://picsum.photos/seed/${project.id}-g${i + 1}/1600/900?grayscale`
                   }
+                  objectPosition={`${g.posX ?? 50}% ${g.posY ?? 50}%`}
                   meta={`${project.code}.${String(i + 1).padStart(2, "0")}`}
                 />
                 {(project.sketchUrl || project.renderUrl) && project.wipePosition === i + 1 && (

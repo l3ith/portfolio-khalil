@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { SortableList, DragHandle } from "@/components/admin/SortableList";
+import { useState } from "react";
+import { SortableList, DragHandle, type DragHandleProps } from "@/components/admin/SortableList";
+import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { adminButtonStyle } from "@/components/admin/ui";
 
 const rowBase = {
@@ -127,40 +129,80 @@ export function ProjectsList({
   );
 }
 
-type Img = { id: string; url: string; ratio: string; labelEn: string; order: number };
+type Img = {
+  id: string;
+  url: string;
+  ratio: string;
+  labelEn: string;
+  order: number;
+  posX?: number;
+  posY?: number;
+};
 
 export function GalleryList({
   images,
   onReorder,
   onDelete,
+  onPosition,
 }: {
   images: Img[];
   onReorder: (ids: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onPosition?: (id: string, x: number, y: number) => Promise<void>;
 }) {
   if (images.length === 0) return null;
-  const cols = "32px 56px 60px 80px 1fr auto";
+  const cols = "32px 56px 60px 80px 1fr auto auto";
   return (
     <div style={{ border: "1px solid var(--rule)" }}>
       <SortableList
         items={images}
         onReorder={onReorder}
         renderItem={(img, handle) => (
-          <div style={{ ...rowBase, gridTemplateColumns: cols }}>
-            <DragHandle handle={handle} />
-            <img
-              src={img.url}
-              alt=""
-              loading="lazy"
-              style={{
-                width: 56,
-                height: 40,
-                objectFit: "cover",
-                background: "rgba(10,10,10,0.06)",
-                border: "1px solid var(--rule)",
-                display: "block",
-              }}
-            />
+          <GalleryRow
+            img={img}
+            handle={handle}
+            cols={cols}
+            onDelete={onDelete}
+            onPosition={onPosition}
+          />
+        )}
+      />
+    </div>
+  );
+}
+
+function GalleryRow({
+  img,
+  handle,
+  cols,
+  onDelete,
+  onPosition,
+}: {
+  img: Img;
+  handle: DragHandleProps;
+  cols: string;
+  onDelete: (id: string) => Promise<void>;
+  onPosition?: (id: string, x: number, y: number) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div>
+      <div style={{ ...rowBase, gridTemplateColumns: cols }}>
+        <DragHandle handle={handle} />
+        <img
+          src={img.url}
+          alt=""
+          loading="lazy"
+          style={{
+            width: 56,
+            height: 40,
+            objectFit: "cover",
+            objectPosition: `${img.posX ?? 50}% ${img.posY ?? 50}%`,
+            background: "rgba(10,10,10,0.06)",
+            border: "1px solid var(--rule)",
+            display: "block",
+          }}
+        />
             <span
               style={{
                 fontFamily: "var(--font-jetbrains-mono)",
@@ -190,18 +232,48 @@ export function GalleryList({
             >
               {img.labelEn}
             </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm("Remove this image?")) onDelete(img.id);
-              }}
-              style={dangerBtn}
-            >
-              Remove
-            </button>
-          </div>
+        {onPosition && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            style={{
+              padding: "6px 10px",
+              border: "1px solid var(--rule)",
+              background: open ? "var(--fg)" : "transparent",
+              color: open ? "var(--bg)" : "var(--fg)",
+              fontFamily: "var(--font-jetbrains-mono)",
+              fontSize: 10,
+              letterSpacing: "0.18em",
+              textTransform: "uppercase",
+              cursor: "pointer",
+            }}
+          >
+            {open ? "Close" : "Position"}
+          </button>
         )}
-      />
+        <button
+          type="button"
+          onClick={() => {
+            if (confirm("Remove this image?")) onDelete(img.id);
+          }}
+          style={dangerBtn}
+        >
+          Remove
+        </button>
+      </div>
+      {open && onPosition && (
+        <div style={{ padding: "16px 24px 20px", borderTop: "1px solid var(--rule)", background: "rgba(10,10,10,0.02)" }}>
+          <div style={{ maxWidth: 360 }}>
+            <ThumbnailPositioner
+              url={img.url}
+              initialX={img.posX ?? 50}
+              initialY={img.posY ?? 50}
+              ratio={img.ratio}
+              onChange={(x, y) => onPosition(img.id, x, y)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

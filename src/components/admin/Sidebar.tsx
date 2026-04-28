@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 const ITEMS = [
   { href: "/admin", label: "Dashboard", icon: IconDashboard, exact: true },
   { href: "/admin/projects", label: "Projects", icon: IconFolder },
+  { href: "/admin/sketchbook", label: "Sketchbook", icon: IconBook },
   { href: "/admin/categories", label: "Categories", icon: IconTag },
   { href: "/admin/about", label: "About", icon: IconUser },
   { href: "/admin/messages", label: "Messages", icon: IconMail },
@@ -229,6 +230,14 @@ function IconTag() {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
       <path d="M2 2h6l5 5-6 6-5-5z" stroke="currentColor" />
       <circle cx="4.5" cy="4.5" r="0.8" fill="currentColor" />
+    </svg>
+  );
+}
+function IconBook() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M2 2h4a2 2 0 0 1 2 2v8a1.5 1.5 0 0 0-1.5-1.5H2z" stroke="currentColor" />
+      <path d="M12 2H8a2 2 0 0 0-2 2v8a1.5 1.5 0 0 1 1.5-1.5H12z" stroke="currentColor" />
     </svg>
   );
 }

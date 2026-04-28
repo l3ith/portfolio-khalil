@@ -37,9 +37,12 @@ export async function fetchProjects(lang: Lang): Promise<Project[]> {
     thumbnailY: p.thumbnailY,
     wipePosition: p.wipePosition,
     gallery: p.images.map((g) => ({
+      id: g.id,
       ratio: g.ratio,
       label: pick(lang, g.labelEn, g.labelFr),
       url: g.url || null,
+      posX: g.posX,
+      posY: g.posY,
     })),
     credits: p.credits.map((c) => [pick(lang, c.roleEn, c.roleFr), c.name] as [string, string]),
   }));
@@ -76,9 +79,12 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
     thumbnailY: p.thumbnailY,
     wipePosition: p.wipePosition,
     gallery: p.images.map((g) => ({
+      id: g.id,
       ratio: g.ratio,
       label: pick(lang, g.labelEn, g.labelFr),
       url: g.url || null,
+      posX: g.posX,
+      posY: g.posY,
     })),
     credits: p.credits.map((c) => [pick(lang, c.roleEn, c.roleFr), c.name] as [string, string]),
   };

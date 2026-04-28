@@ -6,6 +6,7 @@ import { GalleryList, CreditsList } from "@/components/admin/AdminLists";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
+import { AccentHuePicker } from "@/components/admin/AccentHuePicker";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -72,6 +73,15 @@ async function addImage(projectId: string, formData: FormData) {
   revalidatePath(`/admin/projects/${projectId}`);
 }
 
+async function saveImagePosition(projectId: string, slug: string, imageId: string, x: number, y: number) {
+  "use server";
+  const cx = Math.max(0, Math.min(100, Math.round(x)));
+  const cy = Math.max(0, Math.min(100, Math.round(y)));
+  await db.projectImage.update({ where: { id: imageId }, data: { posX: cx, posY: cy } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function removeImage(projectId: string, formData: FormData) {
   "use server";
   const id = String(formData.get("id"));
@@ -113,6 +123,7 @@ async function saveThumbnailUrl(projectId: string, slug: string, url: string) {
   "use server";
   await db.project.update({ where: { id: projectId }, data: { thumbnailUrl: url || null } });
   revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/`);
   revalidatePath(`/work`);
   revalidatePath(`/work/${slug}`);
 }
@@ -193,6 +204,7 @@ export default async function EditProjectPage({
   const saveRenderAction = saveRenderUrl.bind(null, id, project.slug);
   const saveThumbnailAction = saveThumbnailUrl.bind(null, id, project.slug);
   const saveThumbnailPositionAction = saveThumbnailPosition.bind(null, id, project.slug);
+  const saveImagePositionAction = saveImagePosition.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -254,7 +266,14 @@ export default async function EditProjectPage({
           <Grid cols={3}>
             <Field name="client" label="Client" defaultValue={project.client} />
             <Field name="role" label="Role" defaultValue={project.role} />
-            <Field name="accent" label="Accent (OKLCH hue)" defaultValue={project.accent} />
+            <div style={{ gridColumn: "span 3" }}>
+              <AccentHuePicker
+                name="accent"
+                label="Project accent color (titles + reticle on home + slider knob)"
+                help="Pick any color or drag the hue slider — only the hue is stored"
+                defaultValue={project.accent}
+              />
+            </div>
             <Field name="sketchLabel" label="Sketch label" defaultValue={project.sketchLabel ?? ""} />
             <Field name="renderLabel" label="Render label" defaultValue={project.renderLabel ?? ""} />
             <Field name="order" label="Order" type="number" defaultValue={String(project.order)} />
@@ -374,9 +393,12 @@ export default async function EditProjectPage({
             ratio: i.ratio,
             labelEn: i.labelEn,
             order: i.order,
+            posX: i.posX,
+            posY: i.posY,
           }))}
           onReorder={reorderImagesAction}
           onDelete={removeImageByIdAction}
+          onPosition={saveImagePositionAction}
         />
       </Section>
 
