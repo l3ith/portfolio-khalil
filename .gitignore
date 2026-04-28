@@ -54,3 +54,5 @@ playwright.config.ts
 
 # prisma config (local only)
 prisma.config.ts
+
+.vercel

@@ -135,7 +135,7 @@ export default async function AboutAdminPage() {
           </button>
         </form>
         <TimelineList
-          items={timeline.map((t) => ({
+          items={timeline.map((t: (typeof timeline)[number]) => ({
             id: t.id,
             period: t.period,
             roleEn: t.roleEn,
