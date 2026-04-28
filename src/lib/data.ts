@@ -30,6 +30,13 @@ export type Project = {
   wipePosition: number;
   gallery: { id?: string; ratio: string; label: string; url?: string | null; posX?: number; posY?: number }[];
   credits: [string, string][];
+  carousels?: {
+    id: string;
+    position: number;
+    title: string;
+    ratio: string;
+    images: { id: string; url: string; ratio: string; caption: string; posX: number; posY: number }[];
+  }[];
 };
 
 export const PROJECTS: Project[] = [

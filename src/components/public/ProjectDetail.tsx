@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { accentColor, type Project } from "@/lib/data";
+import { ProjectCarouselBlock } from "@/components/public/ProjectCarouselBlock";
 import { Placeholder } from "@/components/Placeholder";
 import { Footer } from "@/components/Footer";
 
@@ -215,6 +216,17 @@ export function ProjectDetail({
             {(project.sketchUrl || project.renderUrl) && project.wipePosition === 0 && (
               <SketchRenderWipe project={project} accent={accent} inline />
             )}
+            {project.carousels
+              ?.filter((c) => c.position === 0)
+              .map((c) => (
+                <ProjectCarouselBlock
+                  key={c.id}
+                  title={c.title}
+                  ratio={c.ratio}
+                  images={c.images}
+                  accent={accent}
+                />
+              ))}
             {project.gallery.map((g, i) => (
               <div key={i}>
                 <Placeholder
@@ -233,6 +245,17 @@ export function ProjectDetail({
                 {(project.sketchUrl || project.renderUrl) && project.wipePosition === i + 1 && (
                   <SketchRenderWipe project={project} accent={accent} inline />
                 )}
+                {project.carousels
+                  ?.filter((c) => c.position === i + 1)
+                  .map((c) => (
+                    <ProjectCarouselBlock
+                      key={c.id}
+                      title={c.title}
+                      ratio={c.ratio}
+                      images={c.images}
+                      accent={accent}
+                    />
+                  ))}
               </div>
             ))}
           </div>

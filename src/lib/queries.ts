@@ -55,6 +55,10 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
       category: true,
       images: { orderBy: { order: "asc" } },
       credits: { orderBy: { order: "asc" } },
+      carousels: {
+        orderBy: { position: "asc" },
+        include: { images: { orderBy: { order: "asc" } } },
+      },
     },
   });
   if (!p) return null;
@@ -85,6 +89,20 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
       url: g.url || null,
       posX: g.posX,
       posY: g.posY,
+    })),
+    carousels: p.carousels.map((c) => ({
+      id: c.id,
+      position: c.position,
+      title: pick(lang, c.titleEn, c.titleFr),
+      ratio: c.ratio,
+      images: c.images.map((im) => ({
+        id: im.id,
+        url: im.url,
+        ratio: im.ratio,
+        caption: im.caption,
+        posX: im.posX,
+        posY: im.posY,
+      })),
     })),
     credits: p.credits.map((c) => [pick(lang, c.roleEn, c.roleFr), c.name] as [string, string]),
   };

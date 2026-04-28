@@ -7,6 +7,7 @@ import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { HexAccentPicker } from "@/components/admin/HexAccentPicker";
+import { CarouselsAdmin } from "@/components/admin/CarouselsAdmin";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -164,6 +165,52 @@ async function removeCreditById(projectId: string, id: string) {
   revalidatePath(`/admin/projects/${projectId}`);
 }
 
+async function addCarousel(projectId: string, slug: string, formData: FormData) {
+  "use server";
+  const title = String(formData.get("title") ?? "").trim();
+  const position = Number(formData.get("position") ?? 0);
+  const ratio = String(formData.get("ratio") ?? "16/9").trim() || "16/9";
+  await db.projectCarousel.create({
+    data: { projectId, titleEn: title, titleFr: title, position, ratio },
+  });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function removeCarousel(projectId: string, slug: string, carouselId: string) {
+  "use server";
+  await db.projectCarousel.delete({ where: { id: carouselId } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function updateCarouselPosition(projectId: string, slug: string, carouselId: string, position: number) {
+  "use server";
+  await db.projectCarousel.update({ where: { id: carouselId }, data: { position: Math.max(0, Math.round(position)) } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function addCarouselImage(projectId: string, slug: string, carouselId: string, formData: FormData) {
+  "use server";
+  const url = String(formData.get("url") ?? "").trim();
+  if (!url) return;
+  const ratio = String(formData.get("ratio") ?? "16/9").trim() || "16/9";
+  const caption = String(formData.get("caption") ?? "").trim();
+  const last = await db.projectCarouselImage.findFirst({ where: { carouselId }, orderBy: { order: "desc" } });
+  const order = (last?.order ?? -1) + 1;
+  await db.projectCarouselImage.create({ data: { carouselId, url, ratio, caption, order } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function removeCarouselImage(projectId: string, slug: string, imageId: string) {
+  "use server";
+  await db.projectCarouselImage.delete({ where: { id: imageId } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function reorderCredits(projectId: string, ids: string[]) {
   "use server";
   await db.$transaction(
@@ -187,6 +234,10 @@ export default async function EditProjectPage({
         images: { orderBy: { order: "asc" } },
         credits: { orderBy: { order: "asc" } },
         category: true,
+        carousels: {
+          orderBy: { position: "asc" },
+          include: { images: { orderBy: { order: "asc" } } },
+        },
       },
     }),
     db.category.findMany({ orderBy: { order: "asc" } }),
@@ -205,6 +256,11 @@ export default async function EditProjectPage({
   const saveThumbnailAction = saveThumbnailUrl.bind(null, id, project.slug);
   const saveThumbnailPositionAction = saveThumbnailPosition.bind(null, id, project.slug);
   const saveImagePositionAction = saveImagePosition.bind(null, id, project.slug);
+  const addCarouselAction = addCarousel.bind(null, id, project.slug);
+  const removeCarouselAction = removeCarousel.bind(null, id, project.slug);
+  const updateCarouselPositionAction = updateCarouselPosition.bind(null, id, project.slug);
+  const addCarouselImageAction = addCarouselImage.bind(null, id, project.slug);
+  const removeCarouselImageAction = removeCarouselImage.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -399,6 +455,32 @@ export default async function EditProjectPage({
           onReorder={reorderImagesAction}
           onDelete={removeImageByIdAction}
           onPosition={saveImagePositionAction}
+        />
+      </Section>
+
+      <Section title={`Carousels (${project.carousels.length}) — image sliders inserted between gallery plates`}>
+        <CarouselsAdmin
+          carousels={project.carousels.map((c) => ({
+            id: c.id,
+            position: c.position,
+            ratio: c.ratio,
+            titleEn: c.titleEn,
+            images: c.images.map((im) => ({
+              id: im.id,
+              url: im.url,
+              ratio: im.ratio,
+              caption: im.caption,
+              posX: im.posX,
+              posY: im.posY,
+              order: im.order,
+            })),
+          }))}
+          galleryCount={project.images.length}
+          onAdd={addCarouselAction}
+          onRemove={removeCarouselAction}
+          onPosition={updateCarouselPositionAction}
+          onAddImage={addCarouselImageAction}
+          onRemoveImage={removeCarouselImageAction}
         />
       </Section>
 
