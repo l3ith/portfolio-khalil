@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { GalleryList, CreditsList } from "@/components/admin/AdminLists";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -115,6 +116,17 @@ async function saveThumbnailUrl(projectId: string, slug: string, url: string) {
   revalidatePath(`/work/${slug}`);
 }
 
+async function saveThumbnailPosition(projectId: string, slug: string, x: number, y: number) {
+  "use server";
+  const cx = Math.max(0, Math.min(100, Math.round(x)));
+  const cy = Math.max(0, Math.min(100, Math.round(y)));
+  await db.project.update({ where: { id: projectId }, data: { thumbnailX: cx, thumbnailY: cy } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/`);
+  revalidatePath(`/work`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function addCredit(projectId: string, formData: FormData) {
   "use server";
   const role = String(formData.get("role") ?? "").trim();
@@ -179,6 +191,7 @@ export default async function EditProjectPage({
   const saveSketchAction = saveSketchUrl.bind(null, id, project.slug);
   const saveRenderAction = saveRenderUrl.bind(null, id, project.slug);
   const saveThumbnailAction = saveThumbnailUrl.bind(null, id, project.slug);
+  const saveThumbnailPositionAction = saveThumbnailPosition.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -246,7 +259,7 @@ export default async function EditProjectPage({
         </Section>
 
         <Section title="Thumbnail">
-          <div style={{ maxWidth: 360 }}>
+          <div style={{ maxWidth: 360, display: "flex", flexDirection: "column", gap: 16 }}>
             <ImageUploader
               name="thumbnailUrl"
               label="Cover image (shown on /work grid — recommend 4:3, ≥ 800×600)"
@@ -254,6 +267,14 @@ export default async function EditProjectPage({
               height={180}
               onChange={saveThumbnailAction}
             />
+            {project.thumbnailUrl && (
+              <ThumbnailPositioner
+                url={project.thumbnailUrl}
+                initialX={project.thumbnailX}
+                initialY={project.thumbnailY}
+                onChange={saveThumbnailPositionAction}
+              />
+            )}
           </div>
         </Section>
 

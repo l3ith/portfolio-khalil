@@ -20,6 +20,7 @@ type Props = {
   showLabel?: boolean;
   meta?: string | null;
   src?: string | null;
+  objectPosition?: string;
 };
 
 export function Placeholder({
@@ -34,6 +35,7 @@ export function Placeholder({
   showLabel = true,
   meta = null,
   src = null,
+  objectPosition,
 }: Props) {
   const isDark = tone === "dark";
   const fg = isDark ? "rgba(240,238,232,0.92)" : "rgba(10,10,10,0.86)";
@@ -67,6 +69,7 @@ export function Placeholder({
             width: "100%",
             height: "100%",
             objectFit: "cover",
+            objectPosition,
           }}
         />
       ) : (

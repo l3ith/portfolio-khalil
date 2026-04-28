@@ -127,6 +127,7 @@ function ProjectCard({ project, total }: { project: Project; total: number }) {
               project.gallery[0]?.url ||
               `https://picsum.photos/seed/${project.id}/800/600?grayscale`
             }
+            objectPosition={`${project.thumbnailX ?? 50}% ${project.thumbnailY ?? 50}%`}
             style={{ height: "100%" }}
             showCorners={true}
           />

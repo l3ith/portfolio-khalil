@@ -43,6 +43,8 @@ model Project {
   sketchUrl     String?
   renderUrl     String?
   thumbnailUrl  String?
+  thumbnailX    Int             @default(50)
+  thumbnailY    Int             @default(50)
   wipePosition  Int             @default(0)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt

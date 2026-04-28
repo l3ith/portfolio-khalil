@@ -15,6 +15,8 @@ export type Project = {
   sketchUrl?: string | null;
   renderUrl?: string | null;
   thumbnailUrl?: string | null;
+  thumbnailX?: number;
+  thumbnailY?: number;
   wipePosition: number;
   gallery: { ratio: string; label: string; url?: string | null }[];
   credits: [string, string][];

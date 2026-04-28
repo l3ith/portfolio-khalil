@@ -33,6 +33,8 @@ export async function fetchProjects(lang: Lang): Promise<Project[]> {
     sketchUrl: p.sketchUrl ?? null,
     renderUrl: p.renderUrl ?? null,
     thumbnailUrl: p.thumbnailUrl ?? null,
+    thumbnailX: p.thumbnailX,
+    thumbnailY: p.thumbnailY,
     wipePosition: p.wipePosition,
     gallery: p.images.map((g) => ({
       ratio: g.ratio,
@@ -70,6 +72,8 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
     sketchUrl: p.sketchUrl ?? null,
     renderUrl: p.renderUrl ?? null,
     thumbnailUrl: p.thumbnailUrl ?? null,
+    thumbnailX: p.thumbnailX,
+    thumbnailY: p.thumbnailY,
     wipePosition: p.wipePosition,
     gallery: p.images.map((g) => ({
       ratio: g.ratio,

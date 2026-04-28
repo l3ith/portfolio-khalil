@@ -168,6 +168,11 @@ function SlideArt({ project, active }: { project: Project; active: boolean }) {
           project.gallery[0]?.url ||
           `https://picsum.photos/seed/${project.id}/1600/900?grayscale`
         }
+        objectPosition={
+          project.thumbnailUrl
+            ? `${project.thumbnailX ?? 50}% ${project.thumbnailY ?? 50}%`
+            : undefined
+        }
         style={{ width: "100%", height: "100%" }}
         showCorners={false}
       />
