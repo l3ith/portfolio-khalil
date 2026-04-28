@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { GalleryList, CreditsList } from "@/components/admin/AdminLists";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -240,10 +241,12 @@ export default async function EditProjectPage({
         </Section>
 
         <Section title="Description">
-          <TextareaField
+          <RichTextEditor
             name="description"
-            label="Description"
+            label="Project description (rich text · Behance-style)"
+            help="Format with B/I, headings, lists, links, quotes — Ctrl+Z to undo"
             defaultValue={project.descriptionEn}
+            minHeight={320}
           />
         </Section>
 

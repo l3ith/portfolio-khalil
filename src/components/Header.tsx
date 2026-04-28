@@ -59,6 +59,14 @@ export function Header({
   const pathname = usePathname();
   const [theme, setTheme] = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 32);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
     <>
@@ -86,8 +94,14 @@ export function Header({
         <Link
           href="/"
           data-cursor="HOME"
+          aria-hidden={scrolled || undefined}
+          tabIndex={scrolled ? -1 : 0}
           style={{
-            pointerEvents: "auto",
+            pointerEvents: scrolled ? "none" : "auto",
+            opacity: scrolled ? 0 : 1,
+            transform: scrolled ? "translateY(-8px)" : "translateY(0)",
+            transition:
+              "opacity 320ms cubic-bezier(0.4,0,0.15,1), transform 320ms cubic-bezier(0.4,0,0.15,1)",
             fontFamily: "var(--font-space-grotesk), Space Grotesk, sans-serif",
             fontWeight: 500,
             fontSize: 15,

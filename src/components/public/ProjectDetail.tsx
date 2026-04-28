@@ -179,9 +179,11 @@ export function ProjectDetail({
           >
             Overview
           </div>
-          <p className="body-text" style={{ fontSize: 19, color: "var(--fg)", margin: 0 }}>
-            {project.description}
-          </p>
+          <div
+            className="body-text rich-content"
+            style={{ fontSize: 19, color: "var(--fg)", margin: 0 }}
+            dangerouslySetInnerHTML={{ __html: project.description || "" }}
+          />
         </div>
       </section>
 
