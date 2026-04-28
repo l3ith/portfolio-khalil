@@ -52,7 +52,4 @@ playwright.config.ts
 # uploads (user-generated content, not versioned)
 /public/uploads/
 
-# prisma config (local only)
-prisma.config.ts
-
 .vercel
