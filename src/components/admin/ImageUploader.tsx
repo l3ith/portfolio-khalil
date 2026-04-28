@@ -90,30 +90,99 @@ export function ImageUploader({
                 opacity: busy ? 0.5 : 1,
               }}
             />
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                setUrl("");
-                onChange?.("");
+            {busy && (
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontFamily: "var(--font-jetbrains-mono)",
+                  fontSize: 11,
+                  letterSpacing: "0.2em",
+                  textTransform: "uppercase",
+                  color: "#f0eee8",
+                  background: "rgba(0,0,0,0.4)",
+                }}
+              >
+                Replacing…
+              </div>
+            )}
+            <div
+              style={{
+                position: "absolute",
+                bottom: 8,
+                left: 8,
+                padding: "3px 8px",
+                background: "rgba(0,0,0,0.55)",
+                color: "rgba(240,238,232,0.85)",
+                fontFamily: "var(--font-jetbrains-mono)",
+                fontSize: 9,
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                pointerEvents: "none",
               }}
+            >
+              Drop or click anywhere to change
+            </div>
+            <div
               style={{
                 position: "absolute",
                 top: 8,
                 right: 8,
-                padding: "4px 10px",
-                background: "rgba(0,0,0,0.7)",
-                color: "#f0eee8",
-                border: "1px solid rgba(240,238,232,0.3)",
-                fontFamily: "var(--font-jetbrains-mono)",
-                fontSize: 10,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                cursor: "pointer",
+                display: "flex",
+                gap: 6,
               }}
             >
-              Replace
-            </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  inputRef.current?.click();
+                }}
+                title="Pick a new file to replace this image"
+                style={{
+                  padding: "4px 10px",
+                  background: "rgba(0,0,0,0.72)",
+                  color: "#f0eee8",
+                  border: "1px solid rgba(240,238,232,0.3)",
+                  fontFamily: "var(--font-jetbrains-mono)",
+                  fontSize: 10,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                }}
+              >
+                Change
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setUrl("");
+                  onChange?.("");
+                }}
+                title="Remove the image entirely"
+                aria-label="Remove image"
+                style={{
+                  width: 26,
+                  height: 26,
+                  background: "rgba(0,0,0,0.72)",
+                  color: "#f0eee8",
+                  border: "1px solid rgba(240,238,232,0.3)",
+                  fontFamily: "var(--font-jetbrains-mono)",
+                  fontSize: 14,
+                  cursor: "pointer",
+                  lineHeight: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                ×
+              </button>
+            </div>
           </>
         ) : (
           <div
