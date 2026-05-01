@@ -73,7 +73,28 @@ export default async function ProjectsPage() {
 
   return (
     <div>
-      {adminPageHeader("Projects", `${projects.length} entries`)}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+        <div style={{ flex: 1 }}>{adminPageHeader("Projects", `${projects.length} entries`)}</div>
+        <Link
+          href="/admin/projects/export"
+          style={{
+            marginTop: 4,
+            padding: "8px 16px",
+            border: "1px solid var(--rule)",
+            fontFamily: "var(--font-jetbrains-mono)",
+            fontSize: 10,
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+            color: "var(--muted)",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            whiteSpace: "nowrap",
+          }}
+        >
+          ↓ Export PDF
+        </Link>
+      </div>
 
       {categories.length === 0 ? (
         <div

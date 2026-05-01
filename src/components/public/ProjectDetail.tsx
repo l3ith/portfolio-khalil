@@ -376,7 +376,17 @@ function SuggestedProjects({
                 tone="light"
                 variant="schematic"
                 accent={accentColor(p.accent)}
-                src={`https://picsum.photos/seed/${p.id}/800/600?grayscale`}
+                src={
+                  p.thumbnailUrl ||
+                  p.renderUrl ||
+                  p.gallery[0]?.url ||
+                  `https://picsum.photos/seed/${p.id}/800/600?grayscale`
+                }
+                objectPosition={
+                  p.thumbnailUrl
+                    ? `${p.thumbnailX ?? 50}% ${p.thumbnailY ?? 50}%`
+                    : undefined
+                }
                 style={{ height: "100%" }}
                 showCorners={true}
               />
