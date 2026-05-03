@@ -241,6 +241,7 @@ export function ProjectDetail({
                   }
                   objectPosition={`${g.posX ?? 50}% ${g.posY ?? 50}%`}
                   meta={`${project.code}.${String(i + 1).padStart(2, "0")}`}
+                  showLabel={!!g.label}
                 />
                 {(project.sketchUrl || project.renderUrl) && project.wipePosition === i + 1 && (
                   <SketchRenderWipe project={project} accent={accent} inline />
@@ -318,10 +319,8 @@ function SuggestedProjects({
   current: Project;
   allProjects: Project[];
 }) {
-  if (allProjects.length < 2) return null;
-  const idx = allProjects.findIndex((p) => p.id === current.id);
-  const nextIdx = (idx + 1) % allProjects.length;
-  const others = allProjects.filter((_, i) => i !== idx && i !== nextIdx).slice(0, 3);
+  const others = allProjects.filter((p) => p.id !== current.id);
+  if (others.length === 0) return null;
 
   return (
     <section
@@ -341,7 +340,7 @@ function SuggestedProjects({
           justifyContent: "space-between",
         }}
       >
-        <span>· Suggested · More work</span>
+        <span>· More work</span>
         <span>{String(others.length).padStart(2, "0")} projects</span>
       </div>
 
@@ -486,6 +485,7 @@ function SketchRenderWipe({ project, accent, inline = false }: { project: Projec
             project.renderUrl ||
             `https://picsum.photos/seed/${project.id}-render/1600/900?grayscale`
           }
+          objectPosition={`${project.renderPosX ?? 50}% ${project.renderPosY ?? 50}%`}
           style={{ position: "absolute", inset: 0 }}
           showCorners={false}
         />
@@ -495,7 +495,7 @@ function SketchRenderWipe({ project, accent, inline = false }: { project: Projec
             inset: 0,
             clipPath: `inset(0 ${100 - pos}% 0 0)`,
             background: project.sketchUrl
-              ? `url(${project.sketchUrl}) center/cover no-repeat`
+              ? `url(${project.sketchUrl}) ${project.sketchPosX ?? 50}% ${project.sketchPosY ?? 50}% / cover no-repeat`
               : "#f4f3ef",
           }}
         />

@@ -41,11 +41,13 @@ function legacyHueToHex(hue: number): string {
 }
 
 function normalize(value: string): string {
-  if (!value) return "#a3c0ff";
+  if (!value) return "#888888";
   const v = value.trim();
   if (HEX_RE.test(v)) return expand(v.startsWith("#") ? v : "#" + v);
   if (/^\d+(\.\d+)?$/.test(v)) return legacyHueToHex(Number(v));
-  return "#a3c0ff";
+  const rgba = v.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+  if (rgba) return rgbToHex(Number(rgba[1]), Number(rgba[2]), Number(rgba[3]));
+  return "#888888";
 }
 
 function hexToRgb(hex: string): [number, number, number] {

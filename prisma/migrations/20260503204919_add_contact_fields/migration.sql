@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "Setting" ADD COLUMN     "behanceUrl" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "instagramUrl" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "linkedinUrl" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "phone1" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "phone2" TEXT NOT NULL DEFAULT '';

@@ -1,7 +1,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { TimelineList } from "@/components/admin/AdminLists";
-import { autoFr } from "@/lib/translate";
+import { ImageUploader } from "@/components/admin/ImageUploader";
 import {
   adminInputStyle,
   adminLabelStyle,
@@ -24,10 +24,22 @@ async function saveAbout(formData: FormData) {
   await db.about.update({
     where: { id: about.id },
     data: {
+      name: String(formData.get("name") ?? "Khalil").trim() || "Khalil",
+      title: String(formData.get("title") ?? "").trim(),
       bioEn: bio,
       bioFr: bio,
-      portraitUrl: String(formData.get("portraitUrl") ?? "").trim() || null,
     },
+  });
+  revalidatePath("/admin/about");
+  revalidatePath("/about");
+}
+
+async function savePortraitUrl(url: string) {
+  "use server";
+  const about = await ensureAbout();
+  await db.about.update({
+    where: { id: about.id },
+    data: { portraitUrl: url || null },
   });
   revalidatePath("/admin/about");
   revalidatePath("/about");
@@ -83,22 +95,37 @@ export default async function AboutAdminPage() {
     <div>
       {adminPageHeader("About", "Bio · timeline · portrait")}
 
+      <Section title="Portrait">
+        <div style={{ maxWidth: 360 }}>
+          <ImageUploader
+            name="portraitUrl"
+            label="Portrait photo (upload or drag — PNG, JPG, WebP)"
+            defaultValue={about.portraitUrl}
+            height={300}
+            onChange={savePortraitUrl}
+          />
+        </div>
+      </Section>
+
       <form action={saveAbout} style={{ marginTop: 32 }}>
-        <Section title="Profile">
-          <label>
-            <div style={adminLabelStyle}>Portrait URL</div>
-            <input
-              name="portraitUrl"
-              defaultValue={about.portraitUrl ?? ""}
-              placeholder="/uploads/portrait.jpg"
-              style={adminInputStyle}
+        <Section title="Identity">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <Field
+              name="name"
+              label="Name (shown in the hero heading)"
+              defaultValue={about.name}
             />
-          </label>
+            <Field
+              name="title"
+              label="Title / subtitle (accent line)"
+              defaultValue={about.title}
+            />
+          </div>
         </Section>
 
         <Section title="Biography">
           <label>
-            <div style={adminLabelStyle}>Bio</div>
+            <div style={adminLabelStyle}>Bio (separate paragraphs with a blank line)</div>
             <textarea
               name="bio"
               defaultValue={about.bioEn}

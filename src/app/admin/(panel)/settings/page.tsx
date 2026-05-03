@@ -9,7 +9,7 @@ import {
 } from "@/components/admin/ui";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { LogoSizeSlider } from "@/components/admin/LogoSizeSlider";
-import { HexColorField } from "@/components/admin/HexColorField";
+import { HexAccentPicker } from "@/components/admin/HexAccentPicker";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,21 @@ async function saveBranding(formData: FormData) {
   revalidatePath("/", "layout");
 }
 
+async function saveLogoText(formData: FormData) {
+  "use server";
+  const s = await ensureSetting();
+  await db.setting.update({
+    where: { id: s.id },
+    data: {
+      logoText: String(formData.get("logoText") ?? "KHALIL") || "KHALIL",
+      logoTextFont: String(formData.get("logoTextFont") ?? "Space Grotesk"),
+      logoTextColor: String(formData.get("logoTextColor") ?? ""),
+    },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/", "layout");
+}
+
 async function saveLogoUrl(url: string) {
   "use server";
   const s = await ensureSetting();
@@ -80,6 +95,24 @@ async function saveLogoUrl(url: string) {
   });
   revalidatePath("/admin/settings");
   revalidatePath("/", "layout");
+}
+
+async function saveContact(formData: FormData) {
+  "use server";
+  const s = await ensureSetting();
+  await db.setting.update({
+    where: { id: s.id },
+    data: {
+      email: String(formData.get("email") ?? "").trim(),
+      phone1: String(formData.get("phone1") ?? "").trim(),
+      phone2: String(formData.get("phone2") ?? "").trim(),
+      behanceUrl: String(formData.get("behanceUrl") ?? "").trim(),
+      instagramUrl: String(formData.get("instagramUrl") ?? "").trim(),
+      linkedinUrl: String(formData.get("linkedinUrl") ?? "").trim(),
+    },
+  });
+  revalidatePath("/admin/settings");
+  revalidatePath("/contact");
 }
 
 async function saveLogoHeight(height: number) {
@@ -172,11 +205,11 @@ export default async function SettingsPage() {
       </form>
 
       <form action={saveBranding} style={{ marginTop: 56 }}>
-        <Section title="Branding · Logo">
+        <Section title="Branding · Logo image">
           <div style={{ maxWidth: 320 }}>
             <ImageUploader
               name="logoUrl"
-              label="Header logo (replaces the KHALIL text — PNG, SVG, or animated GIF)"
+              label="Header logo (replaces the text fallback — PNG, SVG, or animated GIF)"
               defaultValue={s.logoUrl}
               height={120}
               onChange={saveLogoUrl}
@@ -191,29 +224,137 @@ export default async function SettingsPage() {
           </div>
         </Section>
         <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
-          Save logo
+          Save logo image
+        </button>
+      </form>
+
+      <form action={saveLogoText} style={{ marginTop: 56 }}>
+        <Section title="Branding · Texte affiché si aucun logo (fallback)">
+          <div
+            style={{
+              fontFamily: "var(--font-jetbrains-mono)",
+              fontSize: 10,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--muted)",
+              marginBottom: 16,
+            }}
+          >
+            Affiché dans le header quand aucun logo image n'est uploadé ci-dessus.
+          </div>
+          <Grid cols={3}>
+            <Field
+              name="logoText"
+              label="Texte du logo"
+              help="Ex: KHALEIDOSCOPE, K·DESIGN, etc."
+              defaultValue={s.logoText}
+            />
+            <SelectField
+              name="logoTextFont"
+              label="Police du texte"
+              defaultValue={s.logoTextFont}
+              options={FONT_OPTIONS}
+            />
+            <HexAccentPicker
+              name="logoTextColor"
+              label="Couleur du texte"
+              help="Laisse vide pour utiliser la couleur principale"
+              defaultValue={s.logoTextColor || "#0a0a0a"}
+            />
+          </Grid>
+          <div
+            style={{
+              marginTop: 16,
+              padding: "14px 20px",
+              border: "1px solid var(--rule)",
+              display: "inline-flex",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: `"${s.logoTextFont}", sans-serif`,
+                color: s.logoTextColor || "var(--fg)",
+                fontSize: 18,
+                fontWeight: 500,
+                letterSpacing: "0.3em",
+                textTransform: "uppercase",
+              }}
+            >
+              {s.logoText || "KHALIL"}
+            </span>
+          </div>
+        </Section>
+        <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
+          Save logo text
+        </button>
+      </form>
+
+      <form action={saveContact} style={{ marginTop: 56 }}>
+        <Section title="Contact — informations affichées sur /contact">
+          <Grid cols={3}>
+            <Field
+              name="email"
+              label="Email"
+              help="Lien mailto sur la page contact"
+              defaultValue={s.email}
+            />
+            <Field
+              name="phone1"
+              label="Téléphone 1"
+              help="Ex: +33 6 00 00 00 00"
+              defaultValue={s.phone1}
+            />
+            <Field
+              name="phone2"
+              label="Téléphone 2 (optionnel)"
+              help="Ex: +39 02 00 00 00 00"
+              defaultValue={s.phone2}
+            />
+            <Field
+              name="behanceUrl"
+              label="Lien Behance"
+              help="URL complète — ex: https://behance.net/…"
+              defaultValue={s.behanceUrl}
+            />
+            <Field
+              name="instagramUrl"
+              label="Lien Instagram"
+              help="URL complète — ex: https://instagram.com/…"
+              defaultValue={s.instagramUrl}
+            />
+            <Field
+              name="linkedinUrl"
+              label="Lien LinkedIn"
+              help="URL complète — ex: https://linkedin.com/in/…"
+              defaultValue={s.linkedinUrl}
+            />
+          </Grid>
+        </Section>
+        <button type="submit" style={{ ...adminButtonStyle, marginTop: 24 }}>
+          Save contact info
         </button>
       </form>
 
       <form action={saveTheme} style={{ marginTop: 56 }}>
         <Section title="Light theme colors (used when visitor has light mode)">
           <Grid cols={3}>
-            <HexColorField
+            <HexAccentPicker
               name="bgLight"
               label="Page background"
               help="Main background color behind everything"
               defaultValue={s.bgLight}
             />
-            <HexColorField
+            <HexAccentPicker
               name="fgLight"
               label="Main text color"
               help="Primary text + headings"
               defaultValue={s.fgLight}
             />
-            <Field
+            <HexAccentPicker
               name="mutedLight"
-              label="Muted text color (subtle annotations)"
-              help="Accepts hex or rgba(...). Used for captions, smallcaps."
+              label="Muted text color (annotations)"
+              help="Used for captions, smallcaps"
               defaultValue={s.mutedLight}
             />
           </Grid>
@@ -221,22 +362,22 @@ export default async function SettingsPage() {
 
         <Section title="Dark theme colors (used when visitor has dark mode)">
           <Grid cols={3}>
-            <HexColorField
+            <HexAccentPicker
               name="bgDark"
               label="Page background"
               help="Main background color behind everything"
               defaultValue={s.bgDark}
             />
-            <HexColorField
+            <HexAccentPicker
               name="fgDark"
               label="Main text color"
               help="Primary text + headings"
               defaultValue={s.fgDark}
             />
-            <Field
+            <HexAccentPicker
               name="mutedDark"
-              label="Muted text color (subtle annotations)"
-              help="Accepts hex or rgba(...). Used for captions, smallcaps."
+              label="Muted text color (annotations)"
+              help="Used for captions, smallcaps"
               defaultValue={s.mutedDark}
             />
           </Grid>

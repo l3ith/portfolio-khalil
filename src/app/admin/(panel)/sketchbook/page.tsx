@@ -60,11 +60,18 @@ async function saveItemPosition(id: string, x: number, y: number) {
   revalidatePath("/sketchbook");
 }
 
+async function replaceItem(id: string, url: string) {
+  "use server";
+  await db.sketchbookItem.update({ where: { id }, data: { imageUrl: url } });
+  revalidatePath("/admin/sketchbook");
+  revalidatePath("/sketchbook");
+}
+
 export default async function SketchbookAdminPage() {
   const items = await db.sketchbookItem.findMany({ orderBy: { order: "asc" } });
   return (
     <div>
-      {adminPageHeader("Sketchbook", "Standalone renders, sketches, isolated studies")}
+      {adminPageHeader("Sketchbook / Free work", "Standalone renders, sketches, isolated studies")}
 
       <section style={{ marginTop: 32 }}>
         <h2
@@ -136,6 +143,7 @@ export default async function SketchbookAdminPage() {
           onReorder={reorderItems}
           onDelete={removeItem}
           onPosition={saveItemPosition}
+          onReplace={replaceItem}
         />
       </section>
     </div>

@@ -42,7 +42,11 @@ model Project {
   sketchLabel   String?
   renderLabel   String?
   sketchUrl     String?
+  sketchPosX    Int             @default(50)
+  sketchPosY    Int             @default(50)
   renderUrl     String?
+  renderPosX    Int             @default(50)
+  renderPosY    Int             @default(50)
   thumbnailUrl  String?
   thumbnailX    Int             @default(50)
   thumbnailY    Int             @default(50)
@@ -112,6 +116,8 @@ model ProjectCredit {
 
 model About {
   id          String     @id @default(cuid())
+  name        String     @default("Khalil")
+  title       String     @default("— Designer.")
   bioFr       String     @db.Text
   bioEn       String     @db.Text
   portraitUrl String?
@@ -136,6 +142,9 @@ model Setting {
   id                String   @id @default(cuid())
   logoUrl           String?
   logoHeight        Int      @default(28)
+  logoText          String   @default("KHALIL")
+  logoTextFont      String   @default("Space Grotesk")
+  logoTextColor     String   @default("")
   siteTitleFr       String   @default("Khalil — Designer automobile")
   siteTitleEn       String   @default("Khalil — Automotive Designer")
   siteTaglineFr     String   @default("Concept, série, écran.")
@@ -143,6 +152,11 @@ model Setting {
   metaDescriptionFr String   @default("Portfolio de Khalil, designer automobile.")
   metaDescriptionEn String   @default("Portfolio of Khalil, automotive designer.")
   email             String   @default("contact@example.com")
+  phone1            String   @default("")
+  phone2            String   @default("")
+  behanceUrl        String   @default("")
+  instagramUrl      String   @default("")
+  linkedinUrl       String   @default("")
   location          String   @default("Paris / Turin")
   socials           Json     @default("[]")
 

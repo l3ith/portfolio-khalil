@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 const ITEMS = [
   { href: "/admin", label: "Dashboard", icon: IconDashboard, exact: true },
   { href: "/admin/projects", label: "Projects", icon: IconFolder },
-  { href: "/admin/sketchbook", label: "Sketchbook", icon: IconBook },
+  { href: "/admin/sketchbook", label: "Sketchbook / Free work", icon: IconBook },
   { href: "/admin/categories", label: "Categories", icon: IconTag },
   { href: "/admin/about", label: "About", icon: IconUser },
   { href: "/admin/messages", label: "Messages", icon: IconMail },

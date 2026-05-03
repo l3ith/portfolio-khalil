@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import { SortableList, DragHandle, type DragHandleProps } from "@/components/admin/SortableList";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
+import { ReplaceImageButton } from "@/components/admin/ReplaceImageButton";
 import { adminButtonStyle } from "@/components/admin/ui";
+import { isVideo } from "@/lib/media";
 
 const rowBase = {
   display: "grid",
@@ -144,14 +146,16 @@ export function GalleryList({
   onReorder,
   onDelete,
   onPosition,
+  onReplace,
 }: {
   images: Img[];
   onReorder: (ids: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onPosition?: (id: string, x: number, y: number) => Promise<void>;
+  onReplace?: (id: string, url: string) => Promise<void>;
 }) {
   if (images.length === 0) return null;
-  const cols = "32px 56px 60px 80px 1fr auto auto";
+  const cols = onReplace ? "32px 56px 60px 80px 1fr auto auto auto" : "32px 56px 60px 80px 1fr auto auto";
   return (
     <div style={{ border: "1px solid var(--rule)" }}>
       <SortableList
@@ -164,6 +168,7 @@ export function GalleryList({
             cols={cols}
             onDelete={onDelete}
             onPosition={onPosition}
+            onReplace={onReplace}
           />
         )}
       />
@@ -177,32 +182,52 @@ function GalleryRow({
   cols,
   onDelete,
   onPosition,
+  onReplace,
 }: {
   img: Img;
   handle: DragHandleProps;
   cols: string;
   onDelete: (id: string) => Promise<void>;
   onPosition?: (id: string, x: number, y: number) => Promise<void>;
+  onReplace?: (id: string, url: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
       <div style={{ ...rowBase, gridTemplateColumns: cols }}>
         <DragHandle handle={handle} />
-        <img
-          src={img.url}
-          alt=""
-          loading="lazy"
-          style={{
-            width: 56,
-            height: 40,
-            objectFit: "cover",
-            objectPosition: `${img.posX ?? 50}% ${img.posY ?? 50}%`,
-            background: "rgba(10,10,10,0.06)",
-            border: "1px solid var(--rule)",
-            display: "block",
-          }}
-        />
+        {isVideo(img.url) ? (
+          <video
+            src={img.url}
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${img.posX ?? 50}% ${img.posY ?? 50}%`,
+              background: "rgba(10,10,10,0.06)",
+              border: "1px solid var(--rule)",
+              display: "block",
+            }}
+          />
+        ) : (
+          <img
+            src={img.url}
+            alt=""
+            loading="lazy"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${img.posX ?? 50}% ${img.posY ?? 50}%`,
+              background: "rgba(10,10,10,0.06)",
+              border: "1px solid var(--rule)",
+              display: "block",
+            }}
+          />
+        )}
             <span
               style={{
                 fontFamily: "var(--font-jetbrains-mono)",
@@ -250,6 +275,9 @@ function GalleryRow({
           >
             {open ? "Close" : "Position"}
           </button>
+        )}
+        {onReplace && (
+          <ReplaceImageButton onReplace={(url) => onReplace(img.id, url)} />
         )}
         <button
           type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isVideo } from "@/lib/media";
 
 type Image = {
   id: string;
@@ -91,19 +92,37 @@ export function ProjectCarouselBlock({
                   position: "relative",
                 }}
               >
-                <img
-                  src={img.url}
-                  alt={img.caption}
-                  loading="lazy"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: `${img.posX}% ${img.posY}%`,
-                  }}
-                />
+                {isVideo(img.url) ? (
+                  <video
+                    src={img.url}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: `${img.posX}% ${img.posY}%`,
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={img.url}
+                    alt={img.caption}
+                    loading="lazy"
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: `${img.posX}% ${img.posY}%`,
+                    }}
+                  />
+                )}
               </div>
               {img.caption && (
                 <figcaption

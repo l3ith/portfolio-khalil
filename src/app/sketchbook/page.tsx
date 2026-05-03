@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Footer } from "@/components/Footer";
+import { isVideo } from "@/lib/media";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +14,13 @@ export default async function SketchbookPage() {
     >
       <div style={{ padding: "64px 24px 32px", borderBottom: "1px solid var(--rule)" }}>
         <div className="smallcaps" style={{ color: "var(--muted)", marginBottom: 16 }}>
-          · Sketchbook · {String(items.length).padStart(2, "0")} entries
+          · Sketchbook / Free work · {String(items.length).padStart(2, "0")} entries
         </div>
         <h1
           className="display"
           style={{ fontSize: "clamp(56px, 9vw, 168px)", margin: 0, fontWeight: 300 }}
         >
-          Sketchbook
+          Sketchbook / Free work
         </h1>
         <p
           style={{
@@ -51,23 +52,13 @@ export default async function SketchbookPage() {
           · Empty — first entries coming soon.
         </div>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(min(360px, 100%), 1fr))",
-          }}
-        >
-          {items.map((it) => (
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          {items.map((it, idx) => (
             <figure
               key={it.id}
               style={{
                 margin: 0,
-                borderRight: "1px solid var(--rule)",
                 borderBottom: "1px solid var(--rule)",
-                padding: 24,
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
               }}
             >
               <div
@@ -79,22 +70,45 @@ export default async function SketchbookPage() {
                   overflow: "hidden",
                 }}
               >
-                <img
-                  src={it.imageUrl}
-                  alt={it.titleEn}
-                  loading="lazy"
-                  style={{
-                    position: "absolute",
-                    inset: 0,
-                    width: "100%",
-                    height: "100%",
-                    objectFit: "cover",
-                    objectPosition: `${it.posX}% ${it.posY}%`,
-                  }}
-                />
+                {isVideo(it.imageUrl) ? (
+                  <video
+                    src={it.imageUrl}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: `${it.posX}% ${it.posY}%`,
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={it.imageUrl}
+                    alt={it.titleEn}
+                    loading={idx === 0 ? "eager" : "lazy"}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      objectPosition: `${it.posX}% ${it.posY}%`,
+                    }}
+                  />
+                )}
               </div>
               {(it.titleEn || it.noteEn) && (
-                <figcaption>
+                <figcaption
+                  style={{
+                    padding: "20px 24px",
+                    borderTop: "1px solid var(--rule)",
+                  }}
+                >
                   {it.titleEn && (
                     <div
                       style={{

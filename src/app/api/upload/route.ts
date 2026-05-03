@@ -9,6 +9,12 @@ const ALLOWED = [
   "image/avif",
   "image/gif",
   "image/svg+xml",
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  "video/ogg",
 ];
 
 export async function POST(request: Request): Promise<NextResponse> {

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
+import { ReplaceImageButton } from "@/components/admin/ReplaceImageButton";
+import { isVideo } from "@/lib/media";
 import {
   adminButtonStyle,
   adminInputStyle,
@@ -38,6 +40,7 @@ export function CarouselsAdmin({
   onAddImage,
   onRemoveImage,
   onImagePosition,
+  onReplaceImage,
 }: {
   carousels: Carousel[];
   galleryCount: number;
@@ -47,6 +50,7 @@ export function CarouselsAdmin({
   onAddImage: (carouselId: string, formData: FormData) => Promise<void>;
   onRemoveImage: (id: string) => Promise<void>;
   onImagePosition: (imageId: string, x: number, y: number) => Promise<void>;
+  onReplaceImage?: (imageId: string, url: string) => Promise<void>;
 }) {
   const slotOptions: SlotOption[] = [
     { value: "0", label: "Before all gallery images" },
@@ -126,6 +130,7 @@ export function CarouselsAdmin({
               onAddImage={onAddImage}
               onRemoveImage={onRemoveImage}
               onImagePosition={onImagePosition}
+              onReplaceImage={onReplaceImage}
             />
           ))}
         </div>
@@ -142,6 +147,7 @@ function CarouselBlock({
   onAddImage,
   onRemoveImage,
   onImagePosition,
+  onReplaceImage,
 }: {
   c: Carousel;
   slotOptions: SlotOption[];
@@ -150,6 +156,7 @@ function CarouselBlock({
   onAddImage: (carouselId: string, formData: FormData) => Promise<void>;
   onRemoveImage: (id: string) => Promise<void>;
   onImagePosition: (imageId: string, x: number, y: number) => Promise<void>;
+  onReplaceImage?: (imageId: string, url: string) => Promise<void>;
 }) {
   const [pos, setPos] = useState(String(c.position));
   return (
@@ -273,6 +280,7 @@ function CarouselBlock({
               ratio={c.ratio}
               onRemove={onRemoveImage}
               onPosition={onImagePosition}
+              onReplace={onReplaceImage}
             />
           ))}
         </div>
@@ -286,11 +294,13 @@ function FrameRow({
   ratio,
   onRemove,
   onPosition,
+  onReplace,
 }: {
   img: CarouselImage;
   ratio: string;
   onRemove: (id: string) => Promise<void>;
   onPosition: (imageId: string, x: number, y: number) => Promise<void>;
+  onReplace?: (imageId: string, url: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -298,25 +308,42 @@ function FrameRow({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "56px 60px 1fr auto auto",
+          gridTemplateColumns: onReplace ? "56px 60px 1fr auto auto auto" : "56px 60px 1fr auto auto",
           gap: 16,
           alignItems: "center",
           padding: "10px 16px",
         }}
       >
-        <img
-          src={img.url}
-          alt=""
-          loading="lazy"
-          style={{
-            width: 56,
-            height: 40,
-            objectFit: "cover",
-            objectPosition: `${img.posX}% ${img.posY}%`,
-            border: "1px solid var(--rule)",
-            background: "rgba(10,10,10,0.06)",
-          }}
-        />
+        {isVideo(img.url) ? (
+          <video
+            src={img.url}
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${img.posX}% ${img.posY}%`,
+              border: "1px solid var(--rule)",
+              background: "rgba(10,10,10,0.06)",
+            }}
+          />
+        ) : (
+          <img
+            src={img.url}
+            alt=""
+            loading="lazy"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${img.posX}% ${img.posY}%`,
+              border: "1px solid var(--rule)",
+              background: "rgba(10,10,10,0.06)",
+            }}
+          />
+        )}
         <span
           style={{
             fontFamily: "var(--font-jetbrains-mono)",
@@ -354,6 +381,9 @@ function FrameRow({
         >
           {open ? "Close" : "Position"}
         </button>
+        {onReplace && (
+          <ReplaceImageButton onReplace={(url) => onReplace(img.id, url)} />
+        )}
         <button
           type="button"
           onClick={() => {

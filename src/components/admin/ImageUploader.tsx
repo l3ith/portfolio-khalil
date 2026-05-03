@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 import { adminLabelStyle } from "@/components/admin/ui";
+import { isVideo } from "@/lib/media";
 
 function gcd(a: number, b: number): number {
   return b === 0 ? a : gcd(b, a % b);
@@ -93,22 +94,43 @@ export function ImageUploader({
       >
         {url ? (
           <>
-            <img
-              src={url}
-              alt=""
-              onLoad={(e) => {
-                const img = e.currentTarget;
-                if (img.naturalWidth && img.naturalHeight) {
-                  setRatio(reduceRatio(img.naturalWidth, img.naturalHeight));
-                }
-              }}
-              style={{
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                opacity: busy ? 0.5 : 1,
-              }}
-            />
+            {isVideo(url) ? (
+              <video
+                src={url}
+                muted
+                playsInline
+                preload="metadata"
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  if (v.videoWidth && v.videoHeight) {
+                    setRatio(reduceRatio(v.videoWidth, v.videoHeight));
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  opacity: busy ? 0.5 : 1,
+                }}
+              />
+            ) : (
+              <img
+                src={url}
+                alt=""
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  if (img.naturalWidth && img.naturalHeight) {
+                    setRatio(reduceRatio(img.naturalWidth, img.naturalHeight));
+                  }
+                }}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  opacity: busy ? 0.5 : 1,
+                }}
+              />
+            )}
             {busy && (
               <div
                 style={{
@@ -221,7 +243,7 @@ export function ImageUploader({
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*,.gif"
         onChange={onPick}
         style={{ display: "none" }}
       />

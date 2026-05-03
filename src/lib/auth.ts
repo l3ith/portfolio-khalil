@@ -67,4 +67,3 @@ export function checkCredentials(email: string, password: string) {
   );
 }
 
-export const SESSION_COOKIE = COOKIE;

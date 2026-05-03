@@ -9,6 +9,7 @@ export function AboutContent({
   bio,
   timeline,
   labels,
+  portraitUrl,
 }: {
   bio: string[];
   timeline: [string, string, string][];
@@ -23,6 +24,7 @@ export function AboutContent({
     nameLine1: string;
     nameLine2: string;
   };
+  portraitUrl?: string | null;
 }) {
   const [scrollY, setScrollY] = useState(0);
 
@@ -61,7 +63,7 @@ export function AboutContent({
             tone="dark"
             variant="schematic"
             accent="var(--accent)"
-            src="https://picsum.photos/seed/khalil-portrait/1600/2000?grayscale"
+            src={portraitUrl || "https://picsum.photos/seed/khalil-portrait/1600/2000?grayscale"}
             style={{ width: "100%", height: "100vh" }}
             showCorners={false}
           />

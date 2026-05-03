@@ -113,9 +113,27 @@ async function saveSketchUrl(projectId: string, slug: string, url: string) {
   revalidatePath(`/work/${slug}`);
 }
 
+async function saveSketchPosition(projectId: string, slug: string, x: number, y: number) {
+  "use server";
+  const cx = Math.max(0, Math.min(100, Math.round(x)));
+  const cy = Math.max(0, Math.min(100, Math.round(y)));
+  await db.project.update({ where: { id: projectId }, data: { sketchPosX: cx, sketchPosY: cy } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function saveRenderUrl(projectId: string, slug: string, url: string) {
   "use server";
   await db.project.update({ where: { id: projectId }, data: { renderUrl: url || null } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function saveRenderPosition(projectId: string, slug: string, x: number, y: number) {
+  "use server";
+  const cx = Math.max(0, Math.min(100, Math.round(x)));
+  const cy = Math.max(0, Math.min(100, Math.round(y)));
+  await db.project.update({ where: { id: projectId }, data: { renderPosX: cx, renderPosY: cy } });
   revalidatePath(`/admin/projects/${projectId}`);
   revalidatePath(`/work/${slug}`);
 }
@@ -220,6 +238,20 @@ async function saveCarouselImagePosition(projectId: string, slug: string, imageI
   revalidatePath(`/work/${slug}`);
 }
 
+async function replaceGalleryImage(projectId: string, slug: string, imageId: string, url: string) {
+  "use server";
+  await db.projectImage.update({ where: { id: imageId }, data: { url } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function replaceCarouselImage(projectId: string, slug: string, imageId: string, url: string) {
+  "use server";
+  await db.projectCarouselImage.update({ where: { id: imageId }, data: { url } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function reorderCredits(projectId: string, ids: string[]) {
   "use server";
   await db.$transaction(
@@ -261,7 +293,9 @@ export default async function EditProjectPage({
   const removeCreditByIdAction = removeCreditById.bind(null, id);
   const reorderCreditsAction = reorderCredits.bind(null, id);
   const saveSketchAction = saveSketchUrl.bind(null, id, project.slug);
+  const saveSketchPositionAction = saveSketchPosition.bind(null, id, project.slug);
   const saveRenderAction = saveRenderUrl.bind(null, id, project.slug);
+  const saveRenderPositionAction = saveRenderPosition.bind(null, id, project.slug);
   const saveThumbnailAction = saveThumbnailUrl.bind(null, id, project.slug);
   const saveThumbnailPositionAction = saveThumbnailPosition.bind(null, id, project.slug);
   const saveImagePositionAction = saveImagePosition.bind(null, id, project.slug);
@@ -271,6 +305,8 @@ export default async function EditProjectPage({
   const addCarouselImageAction = addCarouselImage.bind(null, id, project.slug);
   const removeCarouselImageAction = removeCarouselImage.bind(null, id, project.slug);
   const saveCarouselImagePositionAction = saveCarouselImagePosition.bind(null, id, project.slug);
+  const replaceGalleryImageAction = replaceGalleryImage.bind(null, id, project.slug);
+  const replaceCarouselImageAction = replaceCarouselImage.bind(null, id, project.slug);
 
   async function deleteAndBack() {
     "use server";
@@ -368,20 +404,40 @@ export default async function EditProjectPage({
 
         <Section title="Sketch · Render slider">
           <Grid cols={2}>
-            <ImageUploader
-              name="sketchUrl"
-              label="Sketch image (left of slider)"
-              defaultValue={project.sketchUrl}
-              height={180}
-              onChange={saveSketchAction}
-            />
-            <ImageUploader
-              name="renderUrl"
-              label="Render image (right of slider)"
-              defaultValue={project.renderUrl}
-              height={180}
-              onChange={saveRenderAction}
-            />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <ImageUploader
+                name="sketchUrl"
+                label="Sketch image (left of slider)"
+                defaultValue={project.sketchUrl}
+                height={180}
+                onChange={saveSketchAction}
+              />
+              {project.sketchUrl && (
+                <ThumbnailPositioner
+                  url={project.sketchUrl}
+                  initialX={project.sketchPosX}
+                  initialY={project.sketchPosY}
+                  onChange={saveSketchPositionAction}
+                />
+              )}
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <ImageUploader
+                name="renderUrl"
+                label="Render image (right of slider)"
+                defaultValue={project.renderUrl}
+                height={180}
+                onChange={saveRenderAction}
+              />
+              {project.renderUrl && (
+                <ThumbnailPositioner
+                  url={project.renderUrl}
+                  initialX={project.renderPosX}
+                  initialY={project.renderPosY}
+                  onChange={saveRenderPositionAction}
+                />
+              )}
+            </div>
           </Grid>
           <div style={{ marginTop: 16 }}>
             <SelectField
@@ -465,6 +521,7 @@ export default async function EditProjectPage({
           onReorder={reorderImagesAction}
           onDelete={removeImageByIdAction}
           onPosition={saveImagePositionAction}
+          onReplace={replaceGalleryImageAction}
         />
       </Section>
 
@@ -492,6 +549,7 @@ export default async function EditProjectPage({
           onAddImage={addCarouselImageAction}
           onRemoveImage={removeCarouselImageAction}
           onImagePosition={saveCarouselImagePositionAction}
+          onReplaceImage={replaceCarouselImageAction}
         />
       </Section>
 

@@ -23,7 +23,11 @@ export type Project = {
   sketchLabel: string;
   renderLabel: string;
   sketchUrl?: string | null;
+  sketchPosX?: number;
+  sketchPosY?: number;
   renderUrl?: string | null;
+  renderPosX?: number;
+  renderPosY?: number;
   thumbnailUrl?: string | null;
   thumbnailX?: number;
   thumbnailY?: number;

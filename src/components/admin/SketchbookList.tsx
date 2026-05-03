@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { SortableList, DragHandle, type DragHandleProps } from "@/components/admin/SortableList";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
+import { ReplaceImageButton } from "@/components/admin/ReplaceImageButton";
+import { isVideo } from "@/lib/media";
 
 type Item = {
   id: string;
@@ -42,11 +44,13 @@ export function SketchbookList({
   onReorder,
   onDelete,
   onPosition,
+  onReplace,
 }: {
   items: Item[];
   onReorder: (ids: string[]) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onPosition: (id: string, x: number, y: number) => Promise<void>;
+  onReplace?: (id: string, url: string) => Promise<void>;
 }) {
   if (items.length === 0)
     return (
@@ -66,14 +70,14 @@ export function SketchbookList({
       </div>
     );
 
-  const cols = "32px 56px 60px 80px 1fr auto auto";
+  const cols = onReplace ? "32px 56px 60px 80px 1fr auto auto auto" : "32px 56px 60px 80px 1fr auto auto";
   return (
     <div style={{ border: "1px solid var(--rule)" }}>
       <SortableList
         items={items}
         onReorder={onReorder}
         renderItem={(it, handle) => (
-          <Row it={it} handle={handle} cols={cols} onDelete={onDelete} onPosition={onPosition} />
+          <Row it={it} handle={handle} cols={cols} onDelete={onDelete} onPosition={onPosition} onReplace={onReplace} />
         )}
       />
     </div>
@@ -86,32 +90,52 @@ function Row({
   cols,
   onDelete,
   onPosition,
+  onReplace,
 }: {
   it: Item;
   handle: DragHandleProps;
   cols: string;
   onDelete: (id: string) => Promise<void>;
   onPosition: (id: string, x: number, y: number) => Promise<void>;
+  onReplace?: (id: string, url: string) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   return (
     <div>
       <div style={{ ...rowBase, gridTemplateColumns: cols }}>
         <DragHandle handle={handle} />
-        <img
-          src={it.imageUrl}
-          alt=""
-          loading="lazy"
-          style={{
-            width: 56,
-            height: 40,
-            objectFit: "cover",
-            objectPosition: `${it.posX}% ${it.posY}%`,
-            background: "rgba(10,10,10,0.06)",
-            border: "1px solid var(--rule)",
-            display: "block",
-          }}
-        />
+        {isVideo(it.imageUrl) ? (
+          <video
+            src={it.imageUrl}
+            muted
+            playsInline
+            preload="metadata"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${it.posX}% ${it.posY}%`,
+              background: "rgba(10,10,10,0.06)",
+              border: "1px solid var(--rule)",
+              display: "block",
+            }}
+          />
+        ) : (
+          <img
+            src={it.imageUrl}
+            alt=""
+            loading="lazy"
+            style={{
+              width: 56,
+              height: 40,
+              objectFit: "cover",
+              objectPosition: `${it.posX}% ${it.posY}%`,
+              background: "rgba(10,10,10,0.06)",
+              border: "1px solid var(--rule)",
+              display: "block",
+            }}
+          />
+        )}
         <span
           style={{
             fontFamily: "var(--font-jetbrains-mono)",
@@ -158,6 +182,9 @@ function Row({
         >
           {open ? "Close" : "Position"}
         </button>
+        {onReplace && (
+          <ReplaceImageButton onReplace={(url) => onReplace(it.id, url)} />
+        )}
         <button
           type="button"
           onClick={() => {

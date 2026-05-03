@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { isVideo } from "@/lib/media";
 
 function hashString(s: string) {
   let h = 0;
@@ -59,19 +60,37 @@ export function Placeholder({
       data-placeholder
     >
       {src ? (
-        <img
-          src={src}
-          alt={label}
-          loading="lazy"
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            objectPosition,
-          }}
-        />
+        isVideo(src) ? (
+          <video
+            src={src}
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition,
+            }}
+          />
+        ) : (
+          <img
+            src={src}
+            alt={label}
+            loading="lazy"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition,
+            }}
+          />
+        )
       ) : (
         <>
           {variant === "stripes" && (

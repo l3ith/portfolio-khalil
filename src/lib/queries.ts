@@ -1,10 +1,6 @@
 import { db } from "@/lib/db";
-import type { Lang } from "@/lib/lang";
+import { pick, type Lang } from "@/lib/lang";
 import type { Project } from "@/lib/data";
-
-function pick(lang: Lang, en: string, fr: string) {
-  return lang === "fr" ? fr || en : en;
-}
 
 export async function fetchProjects(lang: Lang): Promise<Project[]> {
   const rows = await db.project.findMany({
@@ -31,7 +27,11 @@ export async function fetchProjects(lang: Lang): Promise<Project[]> {
     sketchLabel: p.sketchLabel ?? "",
     renderLabel: p.renderLabel ?? "",
     sketchUrl: p.sketchUrl ?? null,
+    sketchPosX: p.sketchPosX,
+    sketchPosY: p.sketchPosY,
     renderUrl: p.renderUrl ?? null,
+    renderPosX: p.renderPosX,
+    renderPosY: p.renderPosY,
     thumbnailUrl: p.thumbnailUrl ?? null,
     thumbnailX: p.thumbnailX,
     thumbnailY: p.thumbnailY,
@@ -77,7 +77,11 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
     sketchLabel: p.sketchLabel ?? "",
     renderLabel: p.renderLabel ?? "",
     sketchUrl: p.sketchUrl ?? null,
+    sketchPosX: p.sketchPosX,
+    sketchPosY: p.sketchPosY,
     renderUrl: p.renderUrl ?? null,
+    renderPosX: p.renderPosX,
+    renderPosY: p.renderPosY,
     thumbnailUrl: p.thumbnailUrl ?? null,
     thumbnailX: p.thumbnailX,
     thumbnailY: p.thumbnailY,
@@ -113,10 +117,16 @@ export async function fetchAbout(lang: Lang) {
     include: { timeline: { orderBy: { order: "asc" } } },
   });
   if (!a)
-    return { bio: [] as string[], timeline: [] as [string, string, string][], portraitUrl: null };
+    return {
+      bio: [] as string[],
+      timeline: [] as [string, string, string][],
+      portraitUrl: null as string | null,
+      name: "Khalil",
+      title: "— Designer.",
+    };
   const bio = (lang === "fr" ? a.bioFr || a.bioEn : a.bioEn).split("\n\n").filter(Boolean);
   const timeline = a.timeline.map(
     (t) => [t.period, pick(lang, t.roleEn, t.roleFr), t.place] as [string, string, string],
   );
-  return { bio, timeline, portraitUrl: a.portraitUrl };
+  return { bio, timeline, portraitUrl: a.portraitUrl, name: a.name, title: a.title };
 }

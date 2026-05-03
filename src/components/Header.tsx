@@ -1,35 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark";
-type Lang = "EN" | "FR";
-
-function readCookie(name: string) {
-  if (typeof document === "undefined") return null;
-  const m = document.cookie.match(new RegExp("(^|; )" + name + "=([^;]+)"));
-  return m ? decodeURIComponent(m[2]) : null;
-}
-function writeCookie(name: string, value: string) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
-}
-
-function useLang(): [Lang, (l: Lang) => void] {
-  const router = useRouter();
-  const [lang, setLang] = useState<Lang>("EN");
-  useEffect(() => {
-    const saved = readCookie("lang");
-    if (saved === "fr") setLang("FR");
-  }, []);
-  const update = (l: Lang) => {
-    setLang(l);
-    writeCookie("lang", l.toLowerCase());
-    router.refresh();
-  };
-  return [lang, update];
-}
 
 function useTheme(): [Theme, (t: Theme) => void] {
   const [theme, setTheme] = useState<Theme>("light");
@@ -52,9 +27,15 @@ function useTheme(): [Theme, (t: Theme) => void] {
 export function Header({
   logoUrl,
   logoHeight = 28,
+  logoText = "KHALIL",
+  logoTextFont = "Space Grotesk",
+  logoTextColor = "",
 }: {
   logoUrl?: string | null;
   logoHeight?: number;
+  logoText?: string;
+  logoTextFont?: string;
+  logoTextColor?: string;
 }) {
   const pathname = usePathname();
   const [theme, setTheme] = useTheme();
@@ -117,24 +98,18 @@ export function Header({
           {logoUrl ? (
             <img
               src={logoUrl}
-              alt="KHALIL"
+              alt={logoText}
               style={{ height: logoHeight, width: "auto", display: "block" }}
             />
           ) : (
-            <>
-              <span
-                aria-hidden
-                style={{
-                  width: 10,
-                  height: 10,
-                  background: "var(--accent)",
-                  display: "inline-block",
-                  transform: "rotate(45deg)",
-                  opacity: 0.95,
-                }}
-              />
-              KHALIL
-            </>
+            <span
+              style={{
+                fontFamily: `"${logoTextFont}", sans-serif`,
+                color: logoTextColor || "var(--fg)",
+              }}
+            >
+              {logoText}
+            </span>
           )}
         </Link>
 
@@ -225,47 +200,6 @@ function Hamburger({ onClick }: { onClick: () => void }) {
   );
 }
 
-function _LangSwitchUnused({
-  lang,
-  setLang,
-}: {
-  lang: "EN" | "FR";
-  setLang: (l: "EN" | "FR") => void;
-}) {
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        border: "1px solid var(--fg)",
-        borderRadius: 999,
-        overflow: "hidden",
-        fontFamily: "var(--font-jetbrains-mono), JetBrains Mono, monospace",
-        fontSize: 11,
-        letterSpacing: "0.18em",
-      }}
-    >
-      {(["EN", "FR"] as const).map((l) => {
-        const active = lang === l;
-        return (
-          <button
-            key={l}
-            data-cursor={l}
-            onClick={() => setLang(l)}
-            style={{
-              padding: "6px 14px",
-              color: active ? "var(--bg)" : "var(--fg)",
-              background: active ? "var(--fg)" : "transparent",
-              transition: "background 320ms, color 320ms",
-            }}
-          >
-            {l}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function OffCanvasMenu({
   open,
   onClose,
@@ -278,9 +212,10 @@ function OffCanvasMenu({
   const items = [
     { href: "/", label: "Index", num: "00" },
     { href: "/work", label: "Work", num: "01" },
-    { href: "/sketchbook", label: "Sketchbook", num: "02" },
-    { href: "/about", label: "About", num: "03" },
-    { href: "/contact", label: "Contact", num: "04" },
+    { href: "/all-projects", label: "All Projects", num: "02" },
+    { href: "/sketchbook", label: "Sketchbook / Free work", num: "03" },
+    { href: "/about", label: "About", num: "04" },
+    { href: "/contact", label: "Contact", num: "05" },
   ];
 
   useEffect(() => {
