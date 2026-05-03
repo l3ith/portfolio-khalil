@@ -20,12 +20,10 @@ export function PublicChrome({
     return <>{children}</>;
   }
 
-  const isHome = pathname === "/";
-
   return (
     <>
       <DriftCursor />
-      {!isHome && <Header logoUrl={logoUrl ?? null} logoHeight={logoHeight ?? 28} />}
+      <Header logoUrl={logoUrl ?? null} logoHeight={logoHeight ?? 28} />
       <main className="fade-in">{children}</main>
     </>
   );
