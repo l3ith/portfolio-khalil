@@ -168,7 +168,7 @@ export function HomeHero({ projects }: { projects: Project[] }) {
             >
               {(project.thumbnailUrl || project.gallery?.[0]?.url) ? (
                 <img
-                  src={project.thumbnailUrl || project.gallery[0].url}
+                  src={project.thumbnailUrl || project.gallery[0]?.url || ""}
                   alt={project.title}
                   style={{
                     position: "absolute",
