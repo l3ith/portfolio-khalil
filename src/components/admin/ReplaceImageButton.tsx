@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
+import { uploadFile } from "@/lib/upload-client";
 
 export function ReplaceImageButton({
   onReplace,
@@ -14,12 +14,7 @@ export function ReplaceImageButton({
   const handleFile = async (file: File) => {
     setBusy(true);
     try {
-      const blob = await upload(`uploads/${file.name}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        contentType: file.type || undefined,
-      });
-      await onReplace(blob.url);
+      await onReplace(await uploadFile(file));
     } finally {
       setBusy(false);
     }

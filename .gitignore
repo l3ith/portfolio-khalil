@@ -53,3 +53,6 @@ playwright.config.ts
 /public/uploads/
 
 .vercel
+
+# R2 migration rollback maps (local only)
+scripts/r2-migration-*.json

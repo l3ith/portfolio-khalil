@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { upload } from "@vercel/blob/client";
+import { uploadFile, type UploadStage } from "@/lib/upload-client";
 import { adminLabelStyle } from "@/components/admin/ui";
 import { isVideo } from "@/lib/media";
 
@@ -33,6 +33,7 @@ export function ImageUploader({
   const [url, setUrl] = useState<string>(defaultValue ?? "");
   const [ratio, setRatio] = useState<string>("");
   const [busy, setBusy] = useState(false);
+  const [stage, setStage] = useState<UploadStage>("uploading");
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -41,13 +42,9 @@ export function ImageUploader({
     setError(null);
     setBusy(true);
     try {
-      const blob = await upload(`uploads/${file.name}`, file, {
-        access: "public",
-        handleUploadUrl: "/api/upload",
-        contentType: file.type || undefined,
-      });
-      setUrl(blob.url);
-      onChange?.(blob.url);
+      const uploaded = await uploadFile(file, setStage);
+      setUrl(uploaded);
+      onChange?.(uploaded);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
     } finally {
@@ -147,7 +144,7 @@ export function ImageUploader({
                   background: "rgba(0,0,0,0.4)",
                 }}
               >
-                Replacing…
+                {stage === "optimizing" ? "Optimizing…" : "Replacing…"}
               </div>
             )}
             <div
@@ -236,7 +233,7 @@ export function ImageUploader({
               color: "var(--muted)",
             }}
           >
-            {busy ? "Uploading…" : error ? error : "Drop file here · or click"}
+            {busy ? (stage === "optimizing" ? "Optimizing…" : "Uploading…") : error ? error : "Drop file here · or click"}
           </div>
         )}
       </div>
