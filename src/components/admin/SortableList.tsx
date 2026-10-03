@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, type CSSProperties, type ReactNode } from "react";
+import { useId, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -40,6 +40,8 @@ export function SortableList<T extends Item>({
   containerStyle?: CSSProperties;
 }) {
   const [items, setItems] = useState(initial);
+  // Stable id so dnd-kit's aria-describedby matches between server and client render
+  const dndId = useId();
   const [, startTransition] = useTransition();
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -65,7 +67,7 @@ export function SortableList<T extends Item>({
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+    <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
         <div style={containerStyle}>
           {items.map((it) => (

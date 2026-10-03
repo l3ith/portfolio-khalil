@@ -39,6 +39,7 @@ model Project {
   images        ProjectImage[]
   credits       ProjectCredit[]
   carousels     ProjectCarousel[]
+  textBlocks    ProjectTextBlock[]
   sketchLabel   String?
   renderLabel   String?
   sketchUrl     String?
@@ -69,6 +70,24 @@ model ProjectCarousel {
   images    ProjectCarouselImage[]
   createdAt DateTime                @default(now())
   updatedAt DateTime                @updatedAt
+
+  @@index([projectId])
+}
+
+// Rich-text block inserted between gallery plates.
+// position = number of plates before it (0 = before all), order = rank among blocks at the same position.
+model ProjectTextBlock {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  position  Int      @default(0)
+  order     Int      @default(0)
+  bodyEn    String   @default("") @db.Text
+  bodyFr    String   @default("") @db.Text
+  width     String   @default("narrow")
+  align     String   @default("center")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 }

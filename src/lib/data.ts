@@ -41,6 +41,7 @@ export type Project = {
     ratio: string;
     images: { id: string; url: string; ratio: string; caption: string; posX: number; posY: number }[];
   }[];
+  textBlocks?: { id: string; position: number; body: string; width: string; align: string }[];
 };
 
 export const PROJECTS: Project[] = [

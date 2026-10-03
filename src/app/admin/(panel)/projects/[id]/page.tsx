@@ -8,6 +8,7 @@ import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { HexAccentPicker } from "@/components/admin/HexAccentPicker";
 import { CarouselsAdmin } from "@/components/admin/CarouselsAdmin";
+import { ProjectLayoutAdmin } from "@/components/admin/ProjectLayoutAdmin";
 import { autoFr } from "@/lib/translate";
 import {
   adminInputStyle,
@@ -252,6 +253,78 @@ async function replaceCarouselImage(projectId: string, slug: string, imageId: st
   revalidatePath(`/work/${slug}`);
 }
 
+const TEXT_WIDTHS = ["narrow", "wide", "full"];
+const TEXT_ALIGNS = ["left", "center", "right"];
+
+async function addTextBlock(projectId: string, slug: string) {
+  "use server";
+  const position = await db.projectImage.count({ where: { projectId } });
+  const last = await db.projectTextBlock.findFirst({
+    where: { projectId, position },
+    orderBy: { order: "desc" },
+  });
+  await db.projectTextBlock.create({
+    data: { projectId, position, order: (last?.order ?? -1) + 1 },
+  });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function saveTextBlock(projectId: string, slug: string, blockId: string, formData: FormData) {
+  "use server";
+  const body = String(formData.get(`body-${blockId}`) ?? "");
+  const width = String(formData.get("width") ?? "");
+  const align = String(formData.get("align") ?? "");
+  await db.projectTextBlock.update({
+    where: { id: blockId, projectId },
+    data: {
+      bodyEn: body,
+      bodyFr: body,
+      width: TEXT_WIDTHS.includes(width) ? width : "narrow",
+      align: TEXT_ALIGNS.includes(align) ? align : "center",
+    },
+  });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+async function removeTextBlock(projectId: string, slug: string, blockId: string) {
+  "use server";
+  await db.projectTextBlock.delete({ where: { id: blockId, projectId } });
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
+// ids = plates and text blocks in display order. Plates get their order from
+// their rank; each text block is anchored after the plates that precede it.
+async function saveLayout(projectId: string, slug: string, ids: string[]) {
+  "use server";
+  const [images, blocks] = await Promise.all([
+    db.projectImage.findMany({ where: { projectId }, select: { id: true } }),
+    db.projectTextBlock.findMany({ where: { projectId }, select: { id: true } }),
+  ]);
+  const imageIds = new Set(images.map((i) => i.id));
+  const blockIds = new Set(blocks.map((b) => b.id));
+  let plates = 0;
+  let rank = 0;
+  const updates = [];
+  for (const id of ids) {
+    if (imageIds.has(id)) {
+      updates.push(db.projectImage.update({ where: { id }, data: { order: plates } }));
+      plates++;
+      rank = 0;
+    } else if (blockIds.has(id)) {
+      updates.push(
+        db.projectTextBlock.update({ where: { id }, data: { position: plates, order: rank } }),
+      );
+      rank++;
+    }
+  }
+  await db.$transaction(updates);
+  revalidatePath(`/admin/projects/${projectId}`);
+  revalidatePath(`/work/${slug}`);
+}
+
 async function reorderCredits(projectId: string, ids: string[]) {
   "use server";
   await db.$transaction(
@@ -279,6 +352,7 @@ export default async function EditProjectPage({
           orderBy: { position: "asc" },
           include: { images: { orderBy: { order: "asc" } } },
         },
+        textBlocks: { orderBy: [{ position: "asc" }, { order: "asc" }] },
       },
     }),
     db.category.findMany({ orderBy: { order: "asc" } }),
@@ -307,6 +381,16 @@ export default async function EditProjectPage({
   const saveCarouselImagePositionAction = saveCarouselImagePosition.bind(null, id, project.slug);
   const replaceGalleryImageAction = replaceGalleryImage.bind(null, id, project.slug);
   const replaceCarouselImageAction = replaceCarouselImage.bind(null, id, project.slug);
+  const addTextBlockAction = addTextBlock.bind(null, id, project.slug);
+  const saveTextBlockAction = saveTextBlock.bind(null, id, project.slug);
+  const removeTextBlockAction = removeTextBlock.bind(null, id, project.slug);
+  const saveLayoutAction = saveLayout.bind(null, id, project.slug);
+  // Remount sortable lists when server order/content changes (they keep local order state)
+  const imagesKey = project.images.map((i) => i.id).join(",");
+  const layoutKey = [
+    imagesKey,
+    ...project.textBlocks.map((b) => `${b.id}:${b.position}:${b.order}:${b.updatedAt.getTime()}`),
+  ].join("|");
 
   async function deleteAndBack() {
     "use server";
@@ -509,6 +593,7 @@ export default async function EditProjectPage({
           </button>
         </form>
         <GalleryList
+          key={imagesKey}
           images={project.images.map((i) => ({
             id: i.id,
             url: i.url,
@@ -522,6 +607,25 @@ export default async function EditProjectPage({
           onDelete={removeImageByIdAction}
           onPosition={saveImagePositionAction}
           onReplace={replaceGalleryImageAction}
+        />
+      </Section>
+
+      <Section title={`Layout — text blocks (${project.textBlocks.length}) between gallery plates`}>
+        <ProjectLayoutAdmin
+          key={layoutKey}
+          plates={project.images.map((i) => ({ id: i.id, url: i.url, label: i.labelEn }))}
+          blocks={project.textBlocks.map((b) => ({
+            id: b.id,
+            position: b.position,
+            order: b.order,
+            body: b.bodyEn,
+            width: b.width,
+            align: b.align,
+          }))}
+          onReorder={saveLayoutAction}
+          onAdd={addTextBlockAction}
+          onSave={saveTextBlockAction}
+          onDelete={removeTextBlockAction}
         />
       </Section>
 

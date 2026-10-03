@@ -59,6 +59,7 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
         orderBy: { position: "asc" },
         include: { images: { orderBy: { order: "asc" } } },
       },
+      textBlocks: { orderBy: [{ position: "asc" }, { order: "asc" }] },
     },
   });
   if (!p) return null;
@@ -107,6 +108,13 @@ export async function fetchProject(slug: string, lang: Lang): Promise<Project | 
         posX: im.posX,
         posY: im.posY,
       })),
+    })),
+    textBlocks: p.textBlocks.map((b) => ({
+      id: b.id,
+      position: b.position,
+      body: pick(lang, b.bodyEn, b.bodyFr),
+      width: b.width,
+      align: b.align,
     })),
     credits: p.credits.map((c) => [pick(lang, c.roleEn, c.roleFr), c.name] as [string, string]),
   };

@@ -32,6 +32,13 @@ export function ProjectDetail({
   }, [project]);
 
   const accent = accentColor(project.accent);
+  const plateCount = project.gallery.length;
+  // Blocks anchored past the last plate (e.g. after a plate was deleted) render at the end
+  const textBlocksAt = (pos: number) =>
+    (project.textBlocks ?? [])
+      .filter((b) => b.position === pos || (pos === plateCount && b.position > pos))
+      .map((b) => <ProjectTextBlock key={b.id} block={b} />);
+  const hasTextBlocks = (project.textBlocks?.length ?? 0) > 0;
 
   return (
     <article
@@ -195,7 +202,7 @@ export function ProjectDetail({
         </div>
       </section>
 
-      {project.gallery.length > 0 || (project.sketchUrl || project.renderUrl) ? (
+      {project.gallery.length > 0 || project.sketchUrl || project.renderUrl || hasTextBlocks ? (
         <section style={{ padding: "96px 24px", maxWidth: 1440, margin: "0 auto" }}>
           {project.gallery.length > 0 && (
             <div
@@ -213,6 +220,7 @@ export function ProjectDetail({
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {textBlocksAt(0)}
             {(project.sketchUrl || project.renderUrl) && project.wipePosition === 0 && (
               <SketchRenderWipe project={project} accent={accent} inline />
             )}
@@ -243,6 +251,7 @@ export function ProjectDetail({
                   meta={`${project.code}.${String(i + 1).padStart(2, "0")}`}
                   showLabel={!!g.label}
                 />
+                {textBlocksAt(i + 1)}
                 {(project.sketchUrl || project.renderUrl) && project.wipePosition === i + 1 && (
                   <SketchRenderWipe project={project} accent={accent} inline />
                 )}
@@ -309,6 +318,31 @@ export function ProjectDetail({
 
       <Footer />
     </article>
+  );
+}
+
+const TEXT_BLOCK_WIDTHS: Record<string, string | number> = { narrow: 720, wide: 1080, full: "100%" };
+const TEXT_BLOCK_MARGINS: Record<string, string> = { left: "0 auto 0 0", center: "0 auto", right: "0 0 0 auto" };
+
+function ProjectTextBlock({
+  block,
+}: {
+  block: NonNullable<Project["textBlocks"]>[number];
+}) {
+  if (!block.body.replace(/<[^>]+>/g, "").trim()) return null;
+  return (
+    <div
+      className="body-text rich-content"
+      style={{
+        width: "100%",
+        maxWidth: TEXT_BLOCK_WIDTHS[block.width] ?? 720,
+        margin: TEXT_BLOCK_MARGINS[block.align] ?? "0 auto",
+        padding: "48px 0",
+        fontSize: 19,
+        color: "var(--fg)",
+      }}
+      dangerouslySetInnerHTML={{ __html: block.body }}
+    />
   );
 }
 
