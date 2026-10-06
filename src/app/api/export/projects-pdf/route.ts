@@ -10,6 +10,12 @@ import {
   StyleSheet,
   renderToBuffer,
 } from "@react-pdf/renderer";
+import sharp from "sharp";
+import { isVideo } from "@/lib/media";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 // ── oklch → hex ──────────────────────────────────────────────────────────────
 function oklchToHex(l: number, c: number, h: number): string {
@@ -191,10 +197,109 @@ const S = StyleSheet.create({
 // ── types ─────────────────────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ProjectData = any;
-type GalleryImg = { url: string; caption?: string };
+type SketchData = Awaited<ReturnType<typeof fetchSketches>>[number];
+type Encoded = { src: { data: Buffer; format: "jpg" }; ratio: number };
+type GalleryImg = Encoded & { caption?: string };
+
+// ── image compression ─────────────────────────────────────────────────────────
+// react-pdf only embeds JPEG/PNG, so every image is re-encoded to JPEG.
+// Levels go from best to smallest; the first one whose rendered PDF fits
+// under MAX_PDF_BYTES is kept.
+const MAX_PDF_BYTES = 15 * 1000 * 1000;
+const SAFETY_BYTES = 500 * 1000; // fonts, text and PDF structure
+const LEVELS = [
+  { edge: 2000, quality: 82 },
+  { edge: 1600, quality: 76 },
+  { edge: 1400, quality: 70 },
+  { edge: 1200, quality: 65 },
+  { edge: 1000, quality: 60 },
+  { edge: 850, quality: 55 },
+  { edge: 700, quality: 50 },
+  { edge: 560, quality: 45 },
+  { edge: 440, quality: 40 },
+];
+type Level = (typeof LEVELS)[number];
+
+async function mapLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<void>) {
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) await fn(items[next++]);
+    })
+  );
+}
+
+async function downloadAll(urls: string[], origin: string): Promise<Map<string, Buffer>> {
+  const map = new Map<string, Buffer>();
+  await mapLimit([...new Set(urls)], 6, async (url) => {
+    try {
+      const res = await fetch(new URL(url, origin)); // relative paths = /public files
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      map.set(url, Buffer.from(await res.arrayBuffer()));
+    } catch (err) {
+      console.warn("PDF export: image skipped", url, err);
+    }
+  });
+  return map;
+}
+
+async function encodeAll(originals: Map<string, Buffer>, level: Level): Promise<Map<string, Encoded>> {
+  const map = new Map<string, Encoded>();
+  await mapLimit([...originals], 4, async ([url, buf]) => {
+    try {
+      const { data, info } = await sharp(buf)
+        .rotate()
+        .resize(level.edge, level.edge, { fit: "inside", withoutEnlargement: true })
+        .flatten({ background: "#ffffff" })
+        .jpeg({ quality: level.quality, mozjpeg: true })
+        .toBuffer({ resolveWithObject: true });
+      map.set(url, { src: { data, format: "jpg" }, ratio: info.width / info.height });
+    } catch (err) {
+      console.warn("PDF export: image not decodable", url, err);
+    }
+  });
+  return map;
+}
+
+function totalBytes(images: Map<string, Encoded>) {
+  let n = 0;
+  for (const img of images.values()) n += img.src.data.length;
+  return n;
+}
+
+// ── media references ──────────────────────────────────────────────────────────
+const usable = (url: unknown): url is string =>
+  typeof url === "string" && url.length > 0 && !isVideo(url);
+
+function thumbRef(project: ProjectData): string | null {
+  return [project.thumbnailUrl, project.renderUrl, project.sketchUrl].find(usable) ?? null;
+}
+
+function galleryRefs(project: ProjectData): { url: string; caption?: string }[] {
+  return [
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...project.images.map((img: any) => ({ url: img.url, caption: img.labelEn || undefined })),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ...project.carousels.flatMap((c: any) => c.images as any[]).map((img: any) => ({
+      url: img.url,
+      caption: img.caption || undefined,
+    })),
+  ].filter((img) => usable(img.url));
+}
 
 // ── Gallery grid (2 columns) ──────────────────────────────────────────────────
-function GalleryGrid({ images, colW, gap }: { images: GalleryImg[]; colW: number; gap: number }) {
+// natural = keep each image's own aspect ratio (sketchbook) instead of 16:9 crops.
+function GalleryGrid({
+  images,
+  colW,
+  gap,
+  natural = false,
+}: {
+  images: GalleryImg[];
+  colW: number;
+  gap: number;
+  natural?: boolean;
+}) {
   const rows: GalleryImg[][] = [];
   for (let i = 0; i < images.length; i += 2) rows.push(images.slice(i, i + 2));
 
@@ -204,14 +309,14 @@ function GalleryGrid({ images, colW, gap }: { images: GalleryImg[]; colW: number
     ...rows.map((row, ri) =>
       React.createElement(
         View,
-        { key: ri, style: { flexDirection: "row", gap, marginBottom: gap } },
+        { key: ri, wrap: false, style: { flexDirection: "row", alignItems: "flex-start", gap, marginBottom: gap } },
         ...row.map((img, ii) =>
           React.createElement(
             View,
             { key: ii, style: { width: colW } },
             React.createElement(PDFImage, {
-              src: img.url,
-              style: { width: colW, height: (colW * 9) / 16, objectFit: "cover" },
+              src: img.src,
+              style: { width: colW, height: natural ? colW / img.ratio : (colW * 9) / 16, objectFit: "cover" },
             }),
             img.caption
               ? React.createElement(
@@ -228,26 +333,30 @@ function GalleryGrid({ images, colW, gap }: { images: GalleryImg[]; colW: number
 }
 
 // ── Project page ──────────────────────────────────────────────────────────────
-function ProjectPage({ project, index, total }: { project: ProjectData; index: number; total: number }) {
+function ProjectPage({
+  project,
+  index,
+  total,
+  images,
+}: {
+  project: ProjectData;
+  index: number;
+  total: number;
+  images: Map<string, Encoded>;
+}) {
   const accent = accentHex(project.accent);
   const description = stripHtml(project.descriptionEn);
   const contentWidth = 507; // A4 595pt − 2×44pt padding
   const gap = 6;
   const colW = (contentWidth - gap) / 2;
 
-  const galleryImages: GalleryImg[] = [
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...project.images
-      .filter((img: any) => img.url)
-      .map((img: any) => ({ url: img.url as string, caption: (img.labelEn || undefined) as string | undefined })),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...project.carousels
-      .flatMap((c: any) => c.images as any[])
-      .filter((img: any) => img.url)
-      .map((img: any) => ({ url: img.url as string, caption: (img.caption || undefined) as string | undefined })),
-  ];
+  const galleryImages: GalleryImg[] = galleryRefs(project).flatMap(({ url, caption }) => {
+    const enc = images.get(url);
+    return enc ? [{ ...enc, caption }] : [];
+  });
 
-  const thumb = project.thumbnailUrl || project.renderUrl || project.sketchUrl;
+  const thumbUrl = thumbRef(project);
+  const thumb = thumbUrl ? images.get(thumbUrl) : undefined;
 
   return React.createElement(
     Page,
@@ -274,8 +383,8 @@ function ProjectPage({ project, index, total }: { project: ProjectData; index: n
       React.createElement(
         View,
         null,
-        React.createElement(Text, { style: S.infoLabel }, "Status"),
-        React.createElement(Text, { style: S.infoValue }, project.published ? "Published" : "Draft")
+        React.createElement(Text, { style: S.infoLabel }, "Year"),
+        React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
       )
     ),
     description && description !== "—"
@@ -292,7 +401,7 @@ function ProjectPage({ project, index, total }: { project: ProjectData; index: n
           null,
           React.createElement(Text, { style: S.sectionLabel }, "Thumbnail"),
           React.createElement(PDFImage, {
-            src: thumb,
+            src: thumb.src,
             style: { width: contentWidth, height: (contentWidth * 9) / 16, objectFit: "cover", marginBottom: 16 },
           })
         )
@@ -337,6 +446,26 @@ function ProjectPage({ project, index, total }: { project: ProjectData; index: n
   );
 }
 
+// ── Sketchbook page(s) ────────────────────────────────────────────────────────
+function SketchbookPage({ items, images }: { items: SketchData[]; images: Map<string, Encoded> }) {
+  const contentWidth = 507;
+  const gap = 8;
+  const colW = (contentWidth - gap) / 2;
+  const sketches: GalleryImg[] = items.flatMap((it) => {
+    const enc = images.get(it.imageUrl);
+    return enc ? [{ ...enc, caption: it.titleEn || undefined }] : [];
+  });
+
+  return React.createElement(
+    Page,
+    { size: "A4", style: S.page },
+    React.createElement(Text, { style: S.meta }, `Sketchbook  ·  Free work  ·  ${sketches.length} entries`),
+    React.createElement(View, { style: { ...S.rule, backgroundColor: "#0a0a0a" } }),
+    React.createElement(Text, { style: { ...S.title, marginBottom: 16 } }, "Sketchbook"),
+    React.createElement(GalleryGrid, { images: sketches, colW, gap, natural: true })
+  );
+}
+
 // ── Cover page ────────────────────────────────────────────────────────────────
 function CoverPage({ count }: { count: number }) {
   const date = new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
@@ -359,21 +488,34 @@ function CoverPage({ count }: { count: number }) {
 }
 
 // ── Document ──────────────────────────────────────────────────────────────────
-function PortfolioPDF({ projects }: { projects: ProjectData[] }) {
+function PortfolioPDF({
+  projects,
+  sketches,
+  images,
+}: {
+  projects: ProjectData[];
+  sketches: SketchData[];
+  images: Map<string, Encoded>;
+}) {
+  const hasSketches = sketches.some((s) => images.has(s.imageUrl));
   return React.createElement(
     Document,
     { title: "Portfolio — Projects", author: "Khalil" },
     React.createElement(CoverPage, { count: projects.length }),
     ...projects.map((p, i) =>
-      React.createElement(ProjectPage, { key: p.id, project: p, index: i, total: projects.length })
-    )
+      React.createElement(ProjectPage, { key: p.id, project: p, index: i, total: projects.length, images })
+    ),
+    hasSketches ? React.createElement(SketchbookPage, { items: sketches, images }) : null
   );
 }
 
 // ── Data fetch ────────────────────────────────────────────────────────────────
+// Same selection and order as the public site: published projects by `order`,
+// then the sketchbook by `order`.
 async function fetchProjects(): Promise<ProjectData[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return (db as any).project.findMany({
+    where: { published: true },
     include: {
       category: true,
       images: { orderBy: { order: "asc" } },
@@ -387,14 +529,41 @@ async function fetchProjects(): Promise<ProjectData[]> {
   });
 }
 
-// ── Route ─────────────────────────────────────────────────────────────────────
-export async function GET() {
-  try {
-    const projects = await fetchProjects();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const nodeBuffer = await renderToBuffer(
-      React.createElement(PortfolioPDF, { projects }) as any
+async function fetchSketches() {
+  return db.sketchbookItem.findMany({ orderBy: { order: "asc" } });
+}
+
+// Re-encode images at decreasing levels until the whole PDF fits in MAX_PDF_BYTES.
+async function renderPdf(projects: ProjectData[], sketches: SketchData[], origin: string): Promise<Buffer> {
+  const urls = [
+    ...projects.flatMap((p) => [thumbRef(p), ...galleryRefs(p).map((g) => g.url)]),
+    ...sketches.map((s) => s.imageUrl),
+  ].filter(usable);
+  const originals = await downloadAll(urls, origin);
+
+  let pdf: Buffer | null = null;
+  for (const [i, level] of LEVELS.entries()) {
+    const isLast = i === LEVELS.length - 1;
+    const images = await encodeAll(originals, level);
+    // No need to render when the images alone already exceed the budget.
+    if (!isLast && totalBytes(images) > MAX_PDF_BYTES - SAFETY_BYTES) continue;
+    pdf = await renderToBuffer(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      React.createElement(PortfolioPDF, { projects, sketches, images }) as any
     );
+    if (pdf.length <= MAX_PDF_BYTES) {
+      console.info(`PDF export: ${(pdf.length / 1e6).toFixed(1)} MB at edge ${level.edge}px / q${level.quality}`);
+      break;
+    }
+  }
+  return pdf!;
+}
+
+// ── Route ─────────────────────────────────────────────────────────────────────
+export async function GET(req: Request) {
+  try {
+    const [projects, sketches] = await Promise.all([fetchProjects(), fetchSketches()]);
+    const nodeBuffer = await renderPdf(projects, sketches, new URL(req.url).origin);
     const buffer = nodeBuffer.buffer.slice(
       nodeBuffer.byteOffset,
       nodeBuffer.byteOffset + nodeBuffer.byteLength
