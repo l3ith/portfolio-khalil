@@ -347,13 +347,6 @@ function ProjectPage({
   const accent = accentHex(project.accent);
   const description = stripHtml(project.descriptionEn);
   const contentWidth = 507; // A4 595pt − 2×44pt padding
-  const gap = 6;
-  const colW = (contentWidth - gap) / 2;
-
-  const galleryImages: GalleryImg[] = galleryRefs(project).flatMap(({ url, caption }) => {
-    const enc = images.get(url);
-    return enc ? [{ ...enc, caption }] : [];
-  });
 
   const thumbUrl = thumbRef(project);
   const thumb = thumbUrl ? images.get(thumbUrl) : undefined;
@@ -406,18 +399,6 @@ function ProjectPage({
           })
         )
       : null,
-    galleryImages.length > 0
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(
-            Text,
-            { style: S.sectionLabel },
-            `Gallery  ·  ${galleryImages.length} image${galleryImages.length !== 1 ? "s" : ""}`
-          ),
-          React.createElement(GalleryGrid, { images: galleryImages, colW, gap })
-        )
-      : null,
     project.credits.length > 0
       ? React.createElement(
           View,
@@ -444,6 +425,86 @@ function ProjectPage({
       `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`
     )
   );
+}
+
+// ── Plate page (one gallery image per page) ───────────────────────────────────
+// A4 in the image's own orientation; the image is fitted (never cropped) inside
+// the margins, with a one-line header and the caption below.
+const A4_SHORT = 595.28;
+const A4_LONG = 841.89;
+const PLATE_MARGIN = 28;
+const PLATE_HEADER = 18;
+const PLATE_FOOTER = 18;
+
+function PlatePage({
+  project,
+  plate,
+  plateIndex,
+  plateCount,
+  accent,
+}: {
+  project: ProjectData;
+  plate: GalleryImg;
+  plateIndex: number;
+  plateCount: number;
+  accent: string;
+}) {
+  const landscape = plate.ratio > 1;
+  const pageW = landscape ? A4_LONG : A4_SHORT;
+  const pageH = landscape ? A4_SHORT : A4_LONG;
+  const boxW = pageW - 2 * PLATE_MARGIN;
+  const boxH = pageH - 2 * PLATE_MARGIN - PLATE_HEADER - PLATE_FOOTER;
+  const fitByWidth = plate.ratio >= boxW / boxH;
+  const w = fitByWidth ? boxW : boxH * plate.ratio;
+  const h = fitByWidth ? boxW / plate.ratio : boxH;
+
+  const smallCaps = { fontSize: 6.5, letterSpacing: 1.5, textTransform: "uppercase" as const, color: "#999999" };
+
+  return React.createElement(
+    Page,
+    { size: "A4", orientation: landscape ? "landscape" : "portrait", style: { ...S.page, padding: PLATE_MARGIN } },
+    React.createElement(
+      View,
+      { style: { height: PLATE_HEADER, flexDirection: "row", justifyContent: "space-between" } },
+      React.createElement(Text, { style: smallCaps }, `${project.code}  ·  ${project.titleEn}`),
+      React.createElement(
+        Text,
+        { style: { ...smallCaps, color: accent } },
+        `Plate ${String(plateIndex + 1).padStart(2, "0")} / ${String(plateCount).padStart(2, "0")}`
+      )
+    ),
+    React.createElement(
+      View,
+      { style: { height: boxH, alignItems: "center", justifyContent: "center" } },
+      React.createElement(PDFImage, { src: plate.src, style: { width: w, height: h } })
+    ),
+    React.createElement(
+      View,
+      { style: { height: PLATE_FOOTER, justifyContent: "flex-end" } },
+      plate.caption ? React.createElement(Text, { style: smallCaps }, plate.caption) : null
+    )
+  );
+}
+
+function projectPages(project: ProjectData, index: number, total: number, images: Map<string, Encoded>) {
+  const accent = accentHex(project.accent);
+  const plates: GalleryImg[] = galleryRefs(project).flatMap(({ url, caption }) => {
+    const enc = images.get(url);
+    return enc ? [{ ...enc, caption }] : [];
+  });
+  return [
+    React.createElement(ProjectPage, { key: project.id, project, index, total, images }),
+    ...plates.map((plate, i) =>
+      React.createElement(PlatePage, {
+        key: `${project.id}-${i}`,
+        project,
+        plate,
+        plateIndex: i,
+        plateCount: plates.length,
+        accent,
+      })
+    ),
+  ];
 }
 
 // ── Sketchbook page(s) ────────────────────────────────────────────────────────
@@ -502,9 +563,7 @@ function PortfolioPDF({
     Document,
     { title: "Portfolio — Projects", author: "Khalil" },
     React.createElement(CoverPage, { count: projects.length }),
-    ...projects.map((p, i) =>
-      React.createElement(ProjectPage, { key: p.id, project: p, index: i, total: projects.length, images })
-    ),
+    ...projects.flatMap((p, i) => projectPages(p, i, projects.length, images)),
     hasSketches ? React.createElement(SketchbookPage, { items: sketches, images }) : null
   );
 }
