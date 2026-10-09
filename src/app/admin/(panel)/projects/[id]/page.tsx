@@ -253,6 +253,22 @@ async function replaceCarouselImage(projectId: string, slug: string, imageId: st
   revalidatePath(`/work/${slug}`);
 }
 
+// PDF export only: the image shares the PDF page of the image just before it.
+async function setImagePdfJoin(projectId: string, imageId: string, join: boolean) {
+  "use server";
+  await db.projectImage.update({ where: { id: imageId, projectId }, data: { pdfJoinPrev: join } });
+  revalidatePath(`/admin/projects/${projectId}`);
+}
+
+async function setCarouselImagePdfJoin(projectId: string, imageId: string, join: boolean) {
+  "use server";
+  await db.projectCarouselImage.update({
+    where: { id: imageId, carousel: { projectId } },
+    data: { pdfJoinPrev: join },
+  });
+  revalidatePath(`/admin/projects/${projectId}`);
+}
+
 const TEXT_WIDTHS = ["narrow", "wide", "full"];
 const TEXT_ALIGNS = ["left", "center", "right"];
 
@@ -385,6 +401,8 @@ export default async function EditProjectPage({
   const saveTextBlockAction = saveTextBlock.bind(null, id, project.slug);
   const removeTextBlockAction = removeTextBlock.bind(null, id, project.slug);
   const saveLayoutAction = saveLayout.bind(null, id, project.slug);
+  const setImagePdfJoinAction = setImagePdfJoin.bind(null, id);
+  const setCarouselImagePdfJoinAction = setCarouselImagePdfJoin.bind(null, id);
   // Remount sortable lists when server order/content changes (they keep local order state)
   const imagesKey = project.images.map((i) => i.id).join(",");
   const layoutKey = [
@@ -613,7 +631,12 @@ export default async function EditProjectPage({
       <Section title={`Layout — text blocks (${project.textBlocks.length}) between gallery plates`}>
         <ProjectLayoutAdmin
           key={layoutKey}
-          plates={project.images.map((i) => ({ id: i.id, url: i.url, label: i.labelEn }))}
+          plates={project.images.map((i) => ({
+            id: i.id,
+            url: i.url,
+            label: i.labelEn,
+            pdfJoinPrev: i.pdfJoinPrev,
+          }))}
           blocks={project.textBlocks.map((b) => ({
             id: b.id,
             position: b.position,
@@ -626,6 +649,7 @@ export default async function EditProjectPage({
           onAdd={addTextBlockAction}
           onSave={saveTextBlockAction}
           onDelete={removeTextBlockAction}
+          onPdfJoin={setImagePdfJoinAction}
         />
       </Section>
 
@@ -644,6 +668,7 @@ export default async function EditProjectPage({
               posX: im.posX,
               posY: im.posY,
               order: im.order,
+              pdfJoinPrev: im.pdfJoinPrev,
             })),
           }))}
           galleryCount={project.images.length}
@@ -654,6 +679,7 @@ export default async function EditProjectPage({
           onRemoveImage={removeCarouselImageAction}
           onImagePosition={saveCarouselImagePositionAction}
           onReplaceImage={replaceCarouselImageAction}
+          onPdfJoin={setCarouselImagePdfJoinAction}
         />
       </Section>
 

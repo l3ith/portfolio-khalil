@@ -102,6 +102,8 @@ model ProjectCarouselImage {
   posY       Int             @default(50)
   caption    String          @default("")
   order      Int             @default(0)
+  // PDF export: share the page of the image just before it in the project flow.
+  pdfJoinPrev Boolean        @default(false)
 
   @@index([carouselId])
 }
@@ -117,6 +119,8 @@ model ProjectImage {
   order     Int     @default(0)
   posX      Int     @default(50)
   posY      Int     @default(50)
+  // PDF export: share the page of the image just before it in the project flow.
+  pdfJoinPrev Boolean @default(false)
 
   @@index([projectId])
 }

@@ -12,6 +12,8 @@ import {
 } from "@react-pdf/renderer";
 import sharp from "sharp";
 import { isVideo } from "@/lib/media";
+import { getActiveTheme } from "@/lib/theme";
+import { hasRichText, loadSiteFonts, RichTextBlock, type RichTextTheme } from "@/lib/pdf-rich-text";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,6 +52,12 @@ function accentHex(value: string | null | undefined): string {
   return "#d4b483";
 }
 
+// react-pdf colors must be plain CSS colors; theme values may be oklch()/rgba().
+function plainColor(value: string, fallback: string) {
+  const v = value.trim();
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v) ? v : fallback;
+}
+
 // ── strip HTML to plain text ──────────────────────────────────────────────────
 function stripHtml(html: string): string {
   return html
@@ -67,20 +75,28 @@ function stripHtml(html: string): string {
     .trim();
 }
 
+// ── geometry ──────────────────────────────────────────────────────────────────
+// Every page shares the A4-landscape width, so plates are all printed at the
+// same width. Plate pages have an auto height that wraps their content.
+const PAGE_W = 841.89;
+const PAGE_H = 595.28;
+const PAD = 44; // cover / intro / sketchbook
+const PLATE_PAD = 36;
+const PLATE_W = PAGE_W - 2 * PLATE_PAD; // width of every plate in the PDF
+const PLATE_GAP = 14;
+// Site project column: max 1440px − 2×24px padding. Text blocks scale from it.
+const SITE_COLUMN_PX = 1392;
+
 // ── styles ────────────────────────────────────────────────────────────────────
 const S = StyleSheet.create({
   page: {
     backgroundColor: "#ffffff",
-    paddingTop: 40,
-    paddingBottom: 48,
-    paddingHorizontal: 44,
+    padding: PAD,
     fontFamily: "Helvetica",
   },
   coverPage: {
     backgroundColor: "#0a0a0a",
-    paddingTop: 0,
-    paddingBottom: 0,
-    paddingHorizontal: 0,
+    padding: 0,
   },
   coverInner: {
     flex: 1,
@@ -183,10 +199,16 @@ const S = StyleSheet.create({
     fontSize: 8.5,
     color: "#333333",
   },
+  smallCaps: {
+    fontSize: 6.5,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
+    color: "#999999",
+  },
   pageNum: {
     position: "absolute",
     bottom: 20,
-    right: 44,
+    right: PAD,
     fontSize: 7,
     letterSpacing: 1.5,
     color: "#bbbbbb",
@@ -200,13 +222,20 @@ type ProjectData = any;
 type SketchData = Awaited<ReturnType<typeof fetchSketches>>[number];
 type Encoded = { src: { data: Buffer; format: "jpg" }; ratio: number };
 type GalleryImg = Encoded & { caption?: string };
+type TextBlockData = { id: string; bodyEn: string; width: string; align: string; position: number };
+
+// One step of a project as the site shows it, top to bottom.
+type FlowItem =
+  | { kind: "image"; url: string; caption?: string; joinPrev: boolean }
+  | { kind: "text"; block: TextBlockData };
+type PageEntry = { kind: "image"; img: GalleryImg } | { kind: "text"; block: TextBlockData };
 
 // ── image compression ─────────────────────────────────────────────────────────
 // react-pdf only embeds JPEG/PNG, so every image is re-encoded to JPEG.
 // Levels go from best to smallest; the first one whose rendered PDF fits
 // under MAX_PDF_BYTES is kept.
 const MAX_PDF_BYTES = 15 * 1000 * 1000;
-const SAFETY_BYTES = 500 * 1000; // fonts, text and PDF structure
+const SAFETY_BYTES = 800 * 1000; // fonts, text and PDF structure
 const LEVELS = [
   { edge: 2000, quality: 82 },
   { edge: 1600, quality: 76 },
@@ -267,7 +296,7 @@ function totalBytes(images: Map<string, Encoded>) {
   return n;
 }
 
-// ── media references ──────────────────────────────────────────────────────────
+// ── project flow ──────────────────────────────────────────────────────────────
 const usable = (url: unknown): url is string =>
   typeof url === "string" && url.length > 0 && !isVideo(url);
 
@@ -275,64 +304,136 @@ function thumbRef(project: ProjectData): string | null {
   return [project.thumbnailUrl, project.renderUrl, project.sketchUrl].find(usable) ?? null;
 }
 
-function galleryRefs(project: ProjectData): { url: string; caption?: string }[] {
-  return [
+// Same order as ProjectDetail.tsx: text blocks and carousels anchored at
+// position N come right after gallery plate N (0 = before the first plate).
+function projectFlow(project: ProjectData): FlowItem[] {
+  const plates = project.images as { url: string; labelEn: string; pdfJoinPrev: boolean }[];
+  const blocks = (project.textBlocks as TextBlockData[]).filter((b) => hasRichText(b.bodyEn));
+  const flow: FlowItem[] = [];
+
+  const anchoredAt = (pos: number) => {
+    for (const block of blocks) {
+      if (block.position === pos || (pos === plates.length && block.position > pos)) {
+        flow.push({ kind: "text", block });
+      }
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...project.images.map((img: any) => ({ url: img.url, caption: img.labelEn || undefined })),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...project.carousels.flatMap((c: any) => c.images as any[]).map((img: any) => ({
-      url: img.url,
-      caption: img.caption || undefined,
-    })),
-  ].filter((img) => usable(img.url));
+    for (const carousel of project.carousels.filter((c: any) => c.position === pos)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const img of carousel.images as any[]) {
+        if (usable(img.url)) {
+          flow.push({ kind: "image", url: img.url, caption: img.caption || undefined, joinPrev: img.pdfJoinPrev });
+        }
+      }
+    }
+  };
+
+  anchoredAt(0);
+  plates.forEach((plate, i) => {
+    if (usable(plate.url)) {
+      flow.push({ kind: "image", url: plate.url, caption: plate.labelEn || undefined, joinPrev: plate.pdfJoinPrev });
+    }
+    anchoredAt(i + 1);
+  });
+  return flow;
 }
 
-// ── Gallery grid (2 columns) ──────────────────────────────────────────────────
-// natural = keep each image's own aspect ratio (sketchbook) instead of 16:9 crops.
-function GalleryGrid({
-  images,
-  colW,
-  gap,
-  natural = false,
+function flowImageUrls(project: ProjectData): string[] {
+  return projectFlow(project).flatMap((item) => (item.kind === "image" ? [item.url] : []));
+}
+
+// Split the flow into PDF pages: each image opens a new page unless it is
+// flagged "same page as previous"; text stays with the image before it
+// (text placed before the first image goes on top of the first page).
+function paginate(flow: FlowItem[], images: Map<string, Encoded>): PageEntry[][] {
+  const pages: PageEntry[][] = [];
+  let pending: PageEntry[] = [];
+  let current: PageEntry[] | null = null;
+
+  for (const item of flow) {
+    if (item.kind === "text") {
+      (current ?? pending).push({ kind: "text", block: item.block });
+      continue;
+    }
+    const enc = images.get(item.url);
+    if (!enc) continue;
+    const entry: PageEntry = { kind: "image", img: { ...enc, caption: item.caption } };
+    if (item.joinPrev && current) {
+      current.push(entry);
+    } else {
+      current = [...pending, entry];
+      pending = [];
+      pages.push(current);
+    }
+  }
+  if (pending.length) pages.push(pending);
+  return pages;
+}
+
+// ── Plate page (auto height, fixed width) ─────────────────────────────────────
+function PlatePage({
+  project,
+  entries,
+  firstPlate,
+  plateCount,
+  accent,
+  textTheme,
 }: {
-  images: GalleryImg[];
-  colW: number;
-  gap: number;
-  natural?: boolean;
+  project: ProjectData;
+  entries: PageEntry[];
+  firstPlate: number;
+  plateCount: number;
+  accent: string;
+  textTheme: RichTextTheme;
 }) {
-  const rows: GalleryImg[][] = [];
-  for (let i = 0; i < images.length; i += 2) rows.push(images.slice(i, i + 2));
+  const imagesHere = entries.filter((e) => e.kind === "image").length;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const range =
+    imagesHere === 0
+      ? ""
+      : imagesHere === 1
+        ? `Plate ${pad(firstPlate + 1)} / ${pad(plateCount)}`
+        : `Plates ${pad(firstPlate + 1)}–${pad(firstPlate + imagesHere)} / ${pad(plateCount)}`;
 
   return React.createElement(
-    View,
-    { style: { marginBottom: 16 } },
-    ...rows.map((row, ri) =>
-      React.createElement(
+    Page,
+    // wrap: false = never split; with no height the page grows to fit its content.
+    { size: { width: PAGE_W }, wrap: false, style: { ...S.page, padding: PLATE_PAD } },
+    React.createElement(
+      View,
+      { style: { flexDirection: "row", justifyContent: "space-between", marginBottom: PLATE_GAP } },
+      React.createElement(Text, { style: S.smallCaps }, `${project.code}  ·  ${project.titleEn}`),
+      React.createElement(Text, { style: { ...S.smallCaps, color: accent } }, range)
+    ),
+    ...entries.map((entry, i) => {
+      const style = { marginTop: i === 0 ? 0 : PLATE_GAP };
+      if (entry.kind === "text") {
+        return React.createElement(
+          View,
+          { key: i, style },
+          React.createElement(RichTextBlock, {
+            html: entry.block.bodyEn,
+            width: entry.block.width,
+            align: entry.block.align,
+            columnWidth: PLATE_W,
+            theme: textTheme,
+          })
+        );
+      }
+      const { img } = entry;
+      return React.createElement(
         View,
-        { key: ri, wrap: false, style: { flexDirection: "row", alignItems: "flex-start", gap, marginBottom: gap } },
-        ...row.map((img, ii) =>
-          React.createElement(
-            View,
-            { key: ii, style: { width: colW } },
-            React.createElement(PDFImage, {
-              src: img.src,
-              style: { width: colW, height: natural ? colW / img.ratio : (colW * 9) / 16, objectFit: "cover" },
-            }),
-            img.caption
-              ? React.createElement(
-                  Text,
-                  { style: { fontSize: 6.5, color: "#aaaaaa", letterSpacing: 1, marginTop: 3 } },
-                  img.caption
-                )
-              : null
-          )
-        )
-      )
-    )
+        { key: i, style, wrap: false },
+        React.createElement(PDFImage, { src: img.src, style: { width: PLATE_W, height: PLATE_W / img.ratio } }),
+        img.caption
+          ? React.createElement(Text, { style: { ...S.smallCaps, marginTop: 5 } }, img.caption)
+          : null
+      );
+    })
   );
 }
 
-// ── Project page ──────────────────────────────────────────────────────────────
+// ── Project intro page ────────────────────────────────────────────────────────
 function ProjectPage({
   project,
   index,
@@ -346,184 +447,156 @@ function ProjectPage({
 }) {
   const accent = accentHex(project.accent);
   const description = stripHtml(project.descriptionEn);
-  const contentWidth = 507; // A4 595pt − 2×44pt padding
+  const contentW = PAGE_W - 2 * PAD;
+  const gap = 28;
+  const textW = 340;
+  const thumbW = contentW - gap - textW;
 
   const thumbUrl = thumbRef(project);
   const thumb = thumbUrl ? images.get(thumbUrl) : undefined;
 
   return React.createElement(
     Page,
-    { size: "A4", style: S.page },
+    { size: [PAGE_W, PAGE_H], style: S.page },
     React.createElement(Text, { style: S.meta }, `${project.code}  ·  ${project.category.nameEn}  ·  ${project.year}`),
     React.createElement(View, { style: { ...S.rule, backgroundColor: accent } }),
-    React.createElement(Text, { style: S.title }, project.titleEn),
-    React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
     React.createElement(
       View,
-      { style: S.infoRow },
+      { style: { flexDirection: "row", gap } },
       React.createElement(
         View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Client"),
-        React.createElement(Text, { style: S.infoValue }, project.client || "—")
-      ),
-      React.createElement(
-        View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Role"),
-        React.createElement(Text, { style: S.infoValue }, project.role || "—")
-      ),
-      React.createElement(
-        View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Year"),
-        React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
-      )
-    ),
-    description && description !== "—"
-      ? React.createElement(
+        { style: { width: thumb ? textW : contentW } },
+        React.createElement(Text, { style: S.title }, project.titleEn),
+        React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
+        React.createElement(
           View,
-          null,
-          React.createElement(Text, { style: S.sectionLabel }, "Description"),
-          React.createElement(Text, { style: S.description }, description)
-        )
-      : null,
-    thumb
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(Text, { style: S.sectionLabel }, "Thumbnail"),
-          React.createElement(PDFImage, {
-            src: thumb.src,
-            style: { width: contentWidth, height: (contentWidth * 9) / 16, objectFit: "cover", marginBottom: 16 },
-          })
-        )
-      : null,
-    project.credits.length > 0
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(Text, { style: S.sectionLabel }, "Credits"),
+          { style: S.infoRow },
           React.createElement(
             View,
-            { style: S.creditsRow },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...project.credits.map((cr: any) =>
+            null,
+            React.createElement(Text, { style: S.infoLabel }, "Client"),
+            React.createElement(Text, { style: S.infoValue }, project.client || "—")
+          ),
+          React.createElement(
+            View,
+            null,
+            React.createElement(Text, { style: S.infoLabel }, "Role"),
+            React.createElement(Text, { style: S.infoValue }, project.role || "—")
+          ),
+          React.createElement(
+            View,
+            null,
+            React.createElement(Text, { style: S.infoLabel }, "Year"),
+            React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
+          )
+        ),
+        description && description !== "—"
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: S.sectionLabel }, "Description"),
+              React.createElement(Text, { style: S.description }, description)
+            )
+          : null,
+        project.credits.length > 0
+          ? React.createElement(
+              View,
+              null,
+              React.createElement(Text, { style: S.sectionLabel }, "Credits"),
               React.createElement(
                 View,
-                { key: cr.id, style: { minWidth: 120 } },
-                React.createElement(Text, { style: S.creditRole }, cr.roleEn),
-                React.createElement(Text, { style: S.creditName }, cr.name)
+                { style: S.creditsRow },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                ...project.credits.map((cr: any) =>
+                  React.createElement(
+                    View,
+                    { key: cr.id, style: { minWidth: 120 } },
+                    React.createElement(Text, { style: S.creditRole }, cr.roleEn),
+                    React.createElement(Text, { style: S.creditName }, cr.name)
+                  )
+                )
               )
             )
-          )
-        )
-      : null,
+          : null
+      ),
+      thumb
+        ? React.createElement(PDFImage, {
+            src: thumb.src,
+            style: { width: thumbW, height: (thumbW * 9) / 16, objectFit: "cover" },
+          })
+        : null
+    ),
     React.createElement(
       Text,
-      { style: S.pageNum },
+      { style: S.pageNum, fixed: true },
       `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`
     )
   );
 }
 
-// ── Plate page (one gallery image per page) ───────────────────────────────────
-// A4 in the image's own orientation; the image is fitted (never cropped) inside
-// the margins, with a one-line header and the caption below.
-const A4_SHORT = 595.28;
-const A4_LONG = 841.89;
-const PLATE_MARGIN = 28;
-const PLATE_HEADER = 18;
-const PLATE_FOOTER = 18;
-
-function PlatePage({
-  project,
-  plate,
-  plateIndex,
-  plateCount,
-  accent,
-}: {
-  project: ProjectData;
-  plate: GalleryImg;
-  plateIndex: number;
-  plateCount: number;
-  accent: string;
-}) {
-  const landscape = plate.ratio > 1;
-  const pageW = landscape ? A4_LONG : A4_SHORT;
-  const pageH = landscape ? A4_SHORT : A4_LONG;
-  const boxW = pageW - 2 * PLATE_MARGIN;
-  const boxH = pageH - 2 * PLATE_MARGIN - PLATE_HEADER - PLATE_FOOTER;
-  const fitByWidth = plate.ratio >= boxW / boxH;
-  const w = fitByWidth ? boxW : boxH * plate.ratio;
-  const h = fitByWidth ? boxW / plate.ratio : boxH;
-
-  const smallCaps = { fontSize: 6.5, letterSpacing: 1.5, textTransform: "uppercase" as const, color: "#999999" };
-
-  return React.createElement(
-    Page,
-    { size: "A4", orientation: landscape ? "landscape" : "portrait", style: { ...S.page, padding: PLATE_MARGIN } },
-    React.createElement(
-      View,
-      { style: { height: PLATE_HEADER, flexDirection: "row", justifyContent: "space-between" } },
-      React.createElement(Text, { style: smallCaps }, `${project.code}  ·  ${project.titleEn}`),
-      React.createElement(
-        Text,
-        { style: { ...smallCaps, color: accent } },
-        `Plate ${String(plateIndex + 1).padStart(2, "0")} / ${String(plateCount).padStart(2, "0")}`
-      )
-    ),
-    React.createElement(
-      View,
-      { style: { height: boxH, alignItems: "center", justifyContent: "center" } },
-      React.createElement(PDFImage, { src: plate.src, style: { width: w, height: h } })
-    ),
-    React.createElement(
-      View,
-      { style: { height: PLATE_FOOTER, justifyContent: "flex-end" } },
-      plate.caption ? React.createElement(Text, { style: smallCaps }, plate.caption) : null
-    )
-  );
-}
-
-function projectPages(project: ProjectData, index: number, total: number, images: Map<string, Encoded>) {
+function projectPages(
+  project: ProjectData,
+  index: number,
+  total: number,
+  images: Map<string, Encoded>,
+  textTheme: RichTextTheme
+) {
   const accent = accentHex(project.accent);
-  const plates: GalleryImg[] = galleryRefs(project).flatMap(({ url, caption }) => {
-    const enc = images.get(url);
-    return enc ? [{ ...enc, caption }] : [];
-  });
+  const pages = paginate(projectFlow(project), images);
+  const plateCount = pages.flat().filter((e) => e.kind === "image").length;
+  let firstPlate = 0;
   return [
     React.createElement(ProjectPage, { key: project.id, project, index, total, images }),
-    ...plates.map((plate, i) =>
-      React.createElement(PlatePage, {
+    ...pages.map((entries, i) => {
+      const page = React.createElement(PlatePage, {
         key: `${project.id}-${i}`,
         project,
-        plate,
-        plateIndex: i,
-        plateCount: plates.length,
+        entries,
+        firstPlate,
+        plateCount,
         accent,
-      })
-    ),
+        textTheme,
+      });
+      firstPlate += entries.filter((e) => e.kind === "image").length;
+      return page;
+    }),
   ];
 }
 
-// ── Sketchbook page(s) ────────────────────────────────────────────────────────
+// ── Sketchbook ────────────────────────────────────────────────────────────────
 function SketchbookPage({ items, images }: { items: SketchData[]; images: Map<string, Encoded> }) {
-  const contentWidth = 507;
+  const cols = 3;
   const gap = 8;
-  const colW = (contentWidth - gap) / 2;
+  const colW = (PAGE_W - 2 * PAD - gap * (cols - 1)) / cols;
+  const maxH = 380;
   const sketches: GalleryImg[] = items.flatMap((it) => {
     const enc = images.get(it.imageUrl);
     return enc ? [{ ...enc, caption: it.titleEn || undefined }] : [];
   });
+  const rows: GalleryImg[][] = [];
+  for (let i = 0; i < sketches.length; i += cols) rows.push(sketches.slice(i, i + cols));
 
   return React.createElement(
     Page,
-    { size: "A4", style: S.page },
+    { size: [PAGE_W, PAGE_H], style: S.page },
     React.createElement(Text, { style: S.meta }, `Sketchbook  ·  Free work  ·  ${sketches.length} entries`),
     React.createElement(View, { style: { ...S.rule, backgroundColor: "#0a0a0a" } }),
     React.createElement(Text, { style: { ...S.title, marginBottom: 16 } }, "Sketchbook"),
-    React.createElement(GalleryGrid, { images: sketches, colW, gap, natural: true })
+    ...rows.map((row, ri) =>
+      React.createElement(
+        View,
+        { key: ri, wrap: false, style: { flexDirection: "row", alignItems: "flex-start", gap, marginBottom: gap } },
+        ...row.map((img, ii) => {
+          const h = Math.min(colW / img.ratio, maxH);
+          return React.createElement(
+            View,
+            { key: ii, style: { width: colW } },
+            React.createElement(PDFImage, { src: img.src, style: { width: h * img.ratio, height: h } }),
+            img.caption ? React.createElement(Text, { style: { ...S.smallCaps, marginTop: 3 } }, img.caption) : null
+          );
+        })
+      )
+    )
   );
 }
 
@@ -532,7 +605,7 @@ function CoverPage({ count }: { count: number }) {
   const date = new Date().toLocaleDateString("fr-FR", { year: "numeric", month: "long", day: "numeric" });
   return React.createElement(
     Page,
-    { size: "A4", style: { ...S.page, ...S.coverPage } },
+    { size: [PAGE_W, PAGE_H], style: { ...S.page, ...S.coverPage } },
     React.createElement(
       View,
       { style: S.coverInner },
@@ -553,17 +626,19 @@ function PortfolioPDF({
   projects,
   sketches,
   images,
+  textTheme,
 }: {
   projects: ProjectData[];
   sketches: SketchData[];
   images: Map<string, Encoded>;
+  textTheme: RichTextTheme;
 }) {
   const hasSketches = sketches.some((s) => images.has(s.imageUrl));
   return React.createElement(
     Document,
     { title: "Portfolio — Projects", author: "Khalil" },
     React.createElement(CoverPage, { count: projects.length }),
-    ...projects.flatMap((p, i) => projectPages(p, i, projects.length, images)),
+    ...projects.flatMap((p, i) => projectPages(p, i, projects.length, images, textTheme)),
     hasSketches ? React.createElement(SketchbookPage, { items: sketches, images }) : null
   );
 }
@@ -582,6 +657,7 @@ async function fetchProjects(): Promise<ProjectData[]> {
         orderBy: { position: "asc" },
         include: { images: { orderBy: { order: "asc" } } },
       },
+      textBlocks: { orderBy: [{ position: "asc" }, { order: "asc" }] },
       credits: { orderBy: { order: "asc" } },
     },
     orderBy: { order: "asc" },
@@ -592,13 +668,26 @@ async function fetchSketches() {
   return db.sketchbookItem.findMany({ orderBy: { order: "asc" } });
 }
 
+async function buildTextTheme(): Promise<RichTextTheme> {
+  const theme = await getActiveTheme();
+  const fonts = await loadSiteFonts(theme);
+  return {
+    ...fonts,
+    fg: plainColor(theme.fgLight, "#0a0a0a"),
+    muted: plainColor(theme.mutedLight, "#737373"),
+    accent: oklchToHex(theme.accentL, theme.accentC, theme.accentH),
+    rule: "#dcdcda",
+    scale: PLATE_W / SITE_COLUMN_PX,
+  };
+}
+
 // Re-encode images at decreasing levels until the whole PDF fits in MAX_PDF_BYTES.
 async function renderPdf(projects: ProjectData[], sketches: SketchData[], origin: string): Promise<Buffer> {
   const urls = [
-    ...projects.flatMap((p) => [thumbRef(p), ...galleryRefs(p).map((g) => g.url)]),
+    ...projects.flatMap((p) => [thumbRef(p), ...flowImageUrls(p)]),
     ...sketches.map((s) => s.imageUrl),
   ].filter(usable);
-  const originals = await downloadAll(urls, origin);
+  const [originals, textTheme] = await Promise.all([downloadAll(urls, origin), buildTextTheme()]);
 
   let pdf: Buffer | null = null;
   for (const [i, level] of LEVELS.entries()) {
@@ -608,7 +697,7 @@ async function renderPdf(projects: ProjectData[], sketches: SketchData[], origin
     if (!isLast && totalBytes(images) > MAX_PDF_BYTES - SAFETY_BYTES) continue;
     pdf = await renderToBuffer(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      React.createElement(PortfolioPDF, { projects, sketches, images }) as any
+      React.createElement(PortfolioPDF, { projects, sketches, images, textTheme }) as any
     );
     if (pdf.length <= MAX_PDF_BYTES) {
       console.info(`PDF export: ${(pdf.length / 1e6).toFixed(1)} MB at edge ${level.edge}px / q${level.quality}`);

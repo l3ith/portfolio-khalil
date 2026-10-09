@@ -5,6 +5,7 @@ import { ImageUploader } from "@/components/admin/ImageUploader";
 import { ThumbnailPositioner } from "@/components/admin/ThumbnailPositioner";
 import { ReplaceImageButton } from "@/components/admin/ReplaceImageButton";
 import { isVideo } from "@/lib/media";
+import { PdfJoinToggle } from "@/components/admin/PdfJoinToggle";
 import {
   adminButtonStyle,
   adminInputStyle,
@@ -19,6 +20,7 @@ type CarouselImage = {
   posX: number;
   posY: number;
   order: number;
+  pdfJoinPrev: boolean;
 };
 
 type Carousel = {
@@ -41,6 +43,7 @@ export function CarouselsAdmin({
   onRemoveImage,
   onImagePosition,
   onReplaceImage,
+  onPdfJoin,
 }: {
   carousels: Carousel[];
   galleryCount: number;
@@ -51,6 +54,7 @@ export function CarouselsAdmin({
   onRemoveImage: (id: string) => Promise<void>;
   onImagePosition: (imageId: string, x: number, y: number) => Promise<void>;
   onReplaceImage?: (imageId: string, url: string) => Promise<void>;
+  onPdfJoin: (imageId: string, join: boolean) => Promise<void>;
 }) {
   const slotOptions: SlotOption[] = [
     { value: "0", label: "Before all gallery images" },
@@ -131,6 +135,7 @@ export function CarouselsAdmin({
               onRemoveImage={onRemoveImage}
               onImagePosition={onImagePosition}
               onReplaceImage={onReplaceImage}
+              onPdfJoin={onPdfJoin}
             />
           ))}
         </div>
@@ -148,6 +153,7 @@ function CarouselBlock({
   onRemoveImage,
   onImagePosition,
   onReplaceImage,
+  onPdfJoin,
 }: {
   c: Carousel;
   slotOptions: SlotOption[];
@@ -157,6 +163,7 @@ function CarouselBlock({
   onRemoveImage: (id: string) => Promise<void>;
   onImagePosition: (imageId: string, x: number, y: number) => Promise<void>;
   onReplaceImage?: (imageId: string, url: string) => Promise<void>;
+  onPdfJoin: (imageId: string, join: boolean) => Promise<void>;
 }) {
   const [pos, setPos] = useState(String(c.position));
   return (
@@ -281,6 +288,7 @@ function CarouselBlock({
               onRemove={onRemoveImage}
               onPosition={onImagePosition}
               onReplace={onReplaceImage}
+              onPdfJoin={onPdfJoin}
             />
           ))}
         </div>
@@ -295,12 +303,14 @@ function FrameRow({
   onRemove,
   onPosition,
   onReplace,
+  onPdfJoin,
 }: {
   img: CarouselImage;
   ratio: string;
   onRemove: (id: string) => Promise<void>;
   onPosition: (imageId: string, x: number, y: number) => Promise<void>;
   onReplace?: (imageId: string, url: string) => Promise<void>;
+  onPdfJoin: (imageId: string, join: boolean) => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -308,7 +318,7 @@ function FrameRow({
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: onReplace ? "56px 60px 1fr auto auto auto" : "56px 60px 1fr auto auto",
+          gridTemplateColumns: onReplace ? "56px 60px 1fr auto auto auto auto" : "56px 60px 1fr auto auto auto",
           gap: 16,
           alignItems: "center",
           padding: "10px 16px",
@@ -381,6 +391,7 @@ function FrameRow({
         >
           {open ? "Close" : "Position"}
         </button>
+        <PdfJoinToggle initial={img.pdfJoinPrev} onChange={(join) => onPdfJoin(img.id, join)} />
         {onReplace && (
           <ReplaceImageButton onReplace={(url) => onReplace(img.id, url)} />
         )}

@@ -5,8 +5,9 @@ import { SortableList, DragHandle } from "@/components/admin/SortableList";
 import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { adminButtonStyle, adminInputStyle, adminLabelStyle } from "@/components/admin/ui";
 import { isVideo } from "@/lib/media";
+import { PdfJoinToggle } from "@/components/admin/PdfJoinToggle";
 
-type Plate = { id: string; url: string; label: string };
+type Plate = { id: string; url: string; label: string; pdfJoinPrev: boolean };
 
 type TextBlock = {
   id: string;
@@ -95,6 +96,7 @@ export function ProjectLayoutAdmin({
   onAdd,
   onSave,
   onDelete,
+  onPdfJoin,
 }: {
   plates: Plate[];
   blocks: TextBlock[];
@@ -102,6 +104,7 @@ export function ProjectLayoutAdmin({
   onAdd: () => Promise<void>;
   onSave: (blockId: string, formData: FormData) => Promise<void>;
   onDelete: (blockId: string) => Promise<void>;
+  onPdfJoin: (imageId: string, join: boolean) => Promise<void>;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -111,6 +114,7 @@ export function ProjectLayoutAdmin({
     <div>
       <div style={{ ...tagStyle, marginBottom: 12 }}>
         · Drag text blocks (and plates) with ⋮⋮ to place them anywhere between the gallery plates.
+        PDF ⤒ same page = printed on the same PDF page as the image before it.
       </div>
       <div style={{ border: "1px solid var(--rule)" }}>
         {items.length === 0 && (
@@ -135,7 +139,10 @@ export function ProjectLayoutAdmin({
                   <span style={tagStyle}>Plate {String(item.index + 1).padStart(2, "0")}</span>
                   {item.plate.label && <span style={{ marginLeft: 12 }}>{item.plate.label}</span>}
                 </div>
-                <span />
+                <PdfJoinToggle
+                  initial={item.plate.pdfJoinPrev}
+                  onChange={(join) => onPdfJoin(item.plate.id, join)}
+                />
               </div>
             ) : (
               <div style={{ borderBottom: "1px solid var(--rule)" }}>
