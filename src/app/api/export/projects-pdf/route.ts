@@ -468,60 +468,65 @@ function ProjectPage({
           style: { width: PLATE_W, height: PLATE_W / thumb.ratio, marginBottom: 24 },
         })
       : null,
-    React.createElement(Text, { style: S.meta }, `${project.code}  ·  ${project.category.nameEn}  ·  ${project.year}`),
-    React.createElement(View, { style: { ...S.rule, backgroundColor: accent } }),
-    React.createElement(Text, { style: S.title }, project.titleEn),
-    React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
+    // Text block centred under the image.
     React.createElement(
       View,
-      { style: S.infoRow },
+      { style: { alignItems: "center", textAlign: "center" } },
+      React.createElement(Text, { style: S.meta }, `${project.code}  ·  ${project.category.nameEn}  ·  ${project.year}`),
+      React.createElement(View, { style: { ...S.rule, width: 64, backgroundColor: accent } }),
+      React.createElement(Text, { style: S.title }, project.titleEn),
+      React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
       React.createElement(
         View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Client"),
-        React.createElement(Text, { style: S.infoValue }, project.client || "—")
-      ),
-      React.createElement(
-        View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Role"),
-        React.createElement(Text, { style: S.infoValue }, project.role || "—")
-      ),
-      React.createElement(
-        View,
-        null,
-        React.createElement(Text, { style: S.infoLabel }, "Year"),
-        React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
-      )
-    ),
-    description && description !== "—"
-      ? React.createElement(
+        { style: { ...S.infoRow, justifyContent: "center" } },
+        React.createElement(
           View,
-          { style: { maxWidth: 560 } }, // readable line length
-          React.createElement(Text, { style: S.sectionLabel }, "Description"),
-          React.createElement(Text, { style: S.description }, description)
+          { style: { alignItems: "center" } },
+          React.createElement(Text, { style: S.infoLabel }, "Client"),
+          React.createElement(Text, { style: S.infoValue }, project.client || "—")
+        ),
+        React.createElement(
+          View,
+          { style: { alignItems: "center" } },
+          React.createElement(Text, { style: S.infoLabel }, "Role"),
+          React.createElement(Text, { style: S.infoValue }, project.role || "—")
+        ),
+        React.createElement(
+          View,
+          { style: { alignItems: "center" } },
+          React.createElement(Text, { style: S.infoLabel }, "Year"),
+          React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
         )
-      : null,
-    project.credits.length > 0
-      ? React.createElement(
-          View,
-          null,
-          React.createElement(Text, { style: S.sectionLabel }, "Credits"),
-          React.createElement(
+      ),
+      description && description !== "—"
+        ? React.createElement(
             View,
-            { style: S.creditsRow },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...project.credits.map((cr: any) =>
-              React.createElement(
-                View,
-                { key: cr.id, style: { minWidth: 120 } },
-                React.createElement(Text, { style: S.creditRole }, cr.roleEn),
-                React.createElement(Text, { style: S.creditName }, cr.name)
+            { style: { maxWidth: 560, alignItems: "center", textAlign: "center" } }, // readable line length
+            React.createElement(Text, { style: { ...S.sectionLabel, textAlign: "center" } }, "Description"),
+            React.createElement(Text, { style: S.description }, description)
+          )
+        : null,
+      project.credits.length > 0
+        ? React.createElement(
+            View,
+            { style: { alignItems: "center" } },
+            React.createElement(Text, { style: S.sectionLabel }, "Credits"),
+            React.createElement(
+              View,
+              { style: { ...S.creditsRow, justifyContent: "center" } },
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              ...project.credits.map((cr: any) =>
+                React.createElement(
+                  View,
+                  { key: cr.id, style: { minWidth: 120, alignItems: "center", textAlign: "center" } },
+                  React.createElement(Text, { style: S.creditRole }, cr.roleEn),
+                  React.createElement(Text, { style: S.creditName }, cr.name)
+                )
               )
             )
           )
-        )
-      : null,
+        : null
+    ),
     React.createElement(
       Text,
       { style: { ...S.pageNum, right: PLATE_PAD } },
@@ -560,40 +565,49 @@ function projectPages(
 }
 
 // ── Sketchbook ────────────────────────────────────────────────────────────────
-function SketchbookPage({ items, images }: { items: SketchData[]; images: Map<string, Encoded> }) {
-  const cols = 3;
-  const gap = 8;
+// One A4-landscape page per group of SKETCHES_PER_PAGE, a single row of images
+// each scaled as large as its column and the page height allow.
+const SKETCHES_PER_PAGE = 3;
+
+function sketchbookPages(items: SketchData[], images: Map<string, Encoded>) {
+  const cols = SKETCHES_PER_PAGE;
+  const gap = 12;
   const colW = (PAGE_W - 2 * PAD - gap * (cols - 1)) / cols;
-  const maxH = 380;
+  const headerH = 96; // meta + rule + title, first page only (with some slack)
+  const captionH = 16;
   const sketches: GalleryImg[] = items.flatMap((it) => {
     const enc = images.get(it.imageUrl);
     return enc ? [{ ...enc, caption: it.titleEn || undefined }] : [];
   });
-  const rows: GalleryImg[][] = [];
-  for (let i = 0; i < sketches.length; i += cols) rows.push(sketches.slice(i, i + cols));
+  const groups: GalleryImg[][] = [];
+  for (let i = 0; i < sketches.length; i += cols) groups.push(sketches.slice(i, i + cols));
 
-  return React.createElement(
-    Page,
-    { size: [PAGE_W, PAGE_H], style: S.page },
-    React.createElement(Text, { style: S.meta }, `Sketchbook  ·  Free work  ·  ${sketches.length} entries`),
-    React.createElement(View, { style: { ...S.rule, backgroundColor: "#0a0a0a" } }),
-    React.createElement(Text, { style: { ...S.title, marginBottom: 16 } }, "Sketchbook"),
-    ...rows.map((row, ri) =>
+  return groups.map((group, gi) => {
+    const maxH = PAGE_H - 2 * PAD - captionH - (gi === 0 ? headerH : 0);
+    return React.createElement(
+      Page,
+      // Fixed A4 page (wrap: false would shrink it to its content); maxH keeps the row on it.
+      { key: `sketch-${gi}`, size: [PAGE_W, PAGE_H], style: S.page },
+      gi === 0
+        ? React.createElement(Text, { style: S.meta }, `Sketchbook  ·  Free work  ·  ${sketches.length} entries`)
+        : null,
+      gi === 0 ? React.createElement(View, { style: { ...S.rule, backgroundColor: "#0a0a0a" } }) : null,
+      gi === 0 ? React.createElement(Text, { style: { ...S.title, marginBottom: 16 } }, "Sketchbook") : null,
       React.createElement(
         View,
-        { key: ri, wrap: false, style: { flexDirection: "row", alignItems: "flex-start", gap, marginBottom: gap } },
-        ...row.map((img, ii) => {
+        { style: { flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap } },
+        ...group.map((img, ii) => {
           const h = Math.min(colW / img.ratio, maxH);
           return React.createElement(
             View,
-            { key: ii, style: { width: colW } },
+            { key: ii, style: { width: colW, alignItems: "center" } },
             React.createElement(PDFImage, { src: img.src, style: { width: h * img.ratio, height: h } }),
             img.caption ? React.createElement(Text, { style: { ...S.smallCaps, marginTop: 3 } }, img.caption) : null
           );
         })
       )
-    )
-  );
+    );
+  });
 }
 
 // ── Cover page ────────────────────────────────────────────────────────────────
@@ -629,13 +643,12 @@ function PortfolioPDF({
   images: Map<string, Encoded>;
   textTheme: RichTextTheme;
 }) {
-  const hasSketches = sketches.some((s) => images.has(s.imageUrl));
   return React.createElement(
     Document,
     { title: "Portfolio — Projects", author: "Khalil" },
     React.createElement(CoverPage, { count: projects.length }),
     ...projects.flatMap((p, i) => projectPages(p, i, projects.length, images, textTheme)),
-    hasSketches ? React.createElement(SketchbookPage, { items: sketches, images }) : null
+    ...sketchbookPages(sketches, images)
   );
 }
 
