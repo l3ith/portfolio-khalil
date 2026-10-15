@@ -434,6 +434,8 @@ function PlatePage({
 }
 
 // ── Project intro page ────────────────────────────────────────────────────────
+// Main image first (same width as the plates), then the project text below.
+// Auto height like the plate pages, so a long description never splits the page.
 function ProjectPage({
   project,
   index,
@@ -447,88 +449,82 @@ function ProjectPage({
 }) {
   const accent = accentHex(project.accent);
   const description = stripHtml(project.descriptionEn);
-  const contentW = PAGE_W - 2 * PAD;
-  const gap = 28;
-  const textW = 340;
-  const thumbW = contentW - gap - textW;
 
   const thumbUrl = thumbRef(project);
   const thumb = thumbUrl ? images.get(thumbUrl) : undefined;
 
   return React.createElement(
     Page,
-    { size: [PAGE_W, PAGE_H], style: S.page },
+    {
+      // No main image: keep a regular A4-landscape page instead of a short strip
+      // (wrap: false would shrink it to its content).
+      size: thumb ? { width: PAGE_W } : [PAGE_W, PAGE_H],
+      wrap: !thumb,
+      style: { ...S.page, padding: PLATE_PAD, paddingBottom: PAD },
+    },
+    thumb
+      ? React.createElement(PDFImage, {
+          src: thumb.src,
+          style: { width: PLATE_W, height: PLATE_W / thumb.ratio, marginBottom: 24 },
+        })
+      : null,
     React.createElement(Text, { style: S.meta }, `${project.code}  ·  ${project.category.nameEn}  ·  ${project.year}`),
     React.createElement(View, { style: { ...S.rule, backgroundColor: accent } }),
+    React.createElement(Text, { style: S.title }, project.titleEn),
+    React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
     React.createElement(
       View,
-      { style: { flexDirection: "row", gap } },
+      { style: S.infoRow },
       React.createElement(
         View,
-        { style: { width: thumb ? textW : contentW } },
-        React.createElement(Text, { style: S.title }, project.titleEn),
-        React.createElement(Text, { style: S.subtitle }, project.subtitleEn),
-        React.createElement(
+        null,
+        React.createElement(Text, { style: S.infoLabel }, "Client"),
+        React.createElement(Text, { style: S.infoValue }, project.client || "—")
+      ),
+      React.createElement(
+        View,
+        null,
+        React.createElement(Text, { style: S.infoLabel }, "Role"),
+        React.createElement(Text, { style: S.infoValue }, project.role || "—")
+      ),
+      React.createElement(
+        View,
+        null,
+        React.createElement(Text, { style: S.infoLabel }, "Year"),
+        React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
+      )
+    ),
+    description && description !== "—"
+      ? React.createElement(
           View,
-          { style: S.infoRow },
+          { style: { maxWidth: 560 } }, // readable line length
+          React.createElement(Text, { style: S.sectionLabel }, "Description"),
+          React.createElement(Text, { style: S.description }, description)
+        )
+      : null,
+    project.credits.length > 0
+      ? React.createElement(
+          View,
+          null,
+          React.createElement(Text, { style: S.sectionLabel }, "Credits"),
           React.createElement(
             View,
-            null,
-            React.createElement(Text, { style: S.infoLabel }, "Client"),
-            React.createElement(Text, { style: S.infoValue }, project.client || "—")
-          ),
-          React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: S.infoLabel }, "Role"),
-            React.createElement(Text, { style: S.infoValue }, project.role || "—")
-          ),
-          React.createElement(
-            View,
-            null,
-            React.createElement(Text, { style: S.infoLabel }, "Year"),
-            React.createElement(Text, { style: S.infoValue }, String(project.year ?? "—"))
-          )
-        ),
-        description && description !== "—"
-          ? React.createElement(
-              View,
-              null,
-              React.createElement(Text, { style: S.sectionLabel }, "Description"),
-              React.createElement(Text, { style: S.description }, description)
-            )
-          : null,
-        project.credits.length > 0
-          ? React.createElement(
-              View,
-              null,
-              React.createElement(Text, { style: S.sectionLabel }, "Credits"),
+            { style: S.creditsRow },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...project.credits.map((cr: any) =>
               React.createElement(
                 View,
-                { style: S.creditsRow },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                ...project.credits.map((cr: any) =>
-                  React.createElement(
-                    View,
-                    { key: cr.id, style: { minWidth: 120 } },
-                    React.createElement(Text, { style: S.creditRole }, cr.roleEn),
-                    React.createElement(Text, { style: S.creditName }, cr.name)
-                  )
-                )
+                { key: cr.id, style: { minWidth: 120 } },
+                React.createElement(Text, { style: S.creditRole }, cr.roleEn),
+                React.createElement(Text, { style: S.creditName }, cr.name)
               )
             )
-          : null
-      ),
-      thumb
-        ? React.createElement(PDFImage, {
-            src: thumb.src,
-            style: { width: thumbW, height: (thumbW * 9) / 16, objectFit: "cover" },
-          })
-        : null
-    ),
+          )
+        )
+      : null,
     React.createElement(
       Text,
-      { style: S.pageNum, fixed: true },
+      { style: { ...S.pageNum, right: PLATE_PAD } },
       `${String(index + 1).padStart(2, "0")} / ${String(total).padStart(2, "0")}`
     )
   );
